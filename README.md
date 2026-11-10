@@ -18,6 +18,18 @@ Clips 是一个 Chrome 扩展，包含侧边栏和本地笔记库。**不需要 
 
 ## 安装（Windows / macOS）
 
+### 让 Agent 帮你安装
+
+可以把本仓库链接交给能访问本机文件、执行命令的 Agent（例如本地运行的 Codex），让它按照本说明协助安装。能否代为操作 Chrome 取决于 Agent 的浏览器工具及授权；加载扩展、授权笔记文件夹等步骤可能需要你亲自点击。只提供聊天或仅在云端运行、未连接本机的 Agent，可以提供操作指导，不能直接安装到你的电脑。
+
+复制下面这段话，连同仓库链接一起发给 Agent：
+
+> 请帮我安装 [Clips](https://github.com/baijianyu1024-cmd/clips)，用于日常使用。先阅读 README，识别我的 Windows 或 macOS 环境，优先下载最新 Release 中的 `clips-chrome-extension.zip`，解压到长期保留的目录，再协助我加载到 Chrome，并设置独立的本地笔记文件夹。需要我手动操作时，请明确告诉我步骤。安装完成后，检查侧栏能否打开，并陪我保存、重新打开一条测试笔记。API Key 我会自己在插件设置里填写。
+
+普通安装使用不需要 Fork、Git 或 Node.js，也不需要从源码构建；想二次创作时再参考下方的「自行二次开发」。
+
+### 手动安装
+
 1. 使用桌面版 Chrome，下载上方的 `clips-chrome-extension.zip`。请选这个附件，而不是 GitHub 自动生成的 `Source code.zip`。
 2. 解压到一个长期保留的文件夹，例如 `Documents/Clips/extension`。不要在 ZIP 压缩包里直接打开。
 3. 在 Chrome 地址栏打开 `chrome://extensions`，开启右上角的「开发者模式」。
@@ -74,7 +86,6 @@ My Clips/
 
 **原仓库由作者维护。** 开源不代表开放原仓库的写入权限。你可以点击 GitHub 上的 **Fork** 将项目复制到自己的账号，再克隆自己的仓库并独立修改、发布；这些改动不会影响原仓库或作者的笔记。也可以直接下载源码进行本地修改。
 
-
 需要 Node.js 22.13 或更新版本与 npm：
 
 ```sh
@@ -100,4 +111,12 @@ npm run package
 
 项目使用 [MIT License](LICENSE)，允许修改、分发和二次开发，请保留许可证与版权声明。
 
-YouTube 阅读功能参考并改编了 [Zara Zhang 的 youtube-digest](https://github.com/zarazhangrui/youtube-digest)。编辑和渲染使用 Tiptap、ProseMirror、Marked 与 markdown-it。完整声明见 [THIRD_PARTY_NOTICES](extension/THIRD_PARTY_NOTICES.txt) 和 `extension/vendor/` 中的许可证；这些声明也包含在安装包内。
+### YouTube 功能来源
+
+**Clips 的 YouTube 相关能力是在参考 Zara Zhang（[@zarazhangrui](https://github.com/zarazhangrui)）的开源项目 [youtube-digest](https://github.com/zarazhangrui/youtube-digest) 后进行的二次创作。**
+
+字幕阅读、Overview、翻译和快捷引用等能力参考了原项目的实现与交互，并结合 Clips 的本地资料库、随读记录与笔记回顾流程进行了适配。感谢 Zara Zhang 分享原项目。原项目的 MIT 许可证与版权声明已保留在 [THIRD_PARTY_NOTICES](extension/THIRD_PARTY_NOTICES.txt) 中，也随安装包分发。
+
+### 其他开源依赖
+
+编辑和渲染使用 Tiptap、ProseMirror、Marked 与 markdown-it。完整声明见 [THIRD_PARTY_NOTICES](extension/THIRD_PARTY_NOTICES.txt) 和 `extension/vendor/` 中的许可证；这些声明也包含在安装包内。
