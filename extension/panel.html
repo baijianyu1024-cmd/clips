@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clips</title><link rel="stylesheet" href="panel.css"><link rel="stylesheet" href="markdown.css"></head>
+<body>
+  <div id="demo-label" hidden>交互演示 · 不读取真实网页</div>
+  <header class="brandbar"><div class="brand"><img src="icons/32.png" alt=""><span>Clips</span></div><div class="header-actions"><button data-action="library" title="打开笔记库" aria-label="打开笔记库">↗</button><button data-action="settings" title="阅读设置" aria-label="阅读设置">⚙</button></div></header>
+  <div id="connection" class="connection"></div>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <aside id="record-context" class="record-context" role="status" aria-live="polite" hidden></aside>
+  <main>
+    <section id="page-card" class="page-card"></section>
+    <section id="reading-tools" aria-label="阅读工具"></section>
+    <section id="quick-quotes" class="quick-quotes" aria-label="待保存的视频引用" hidden></section>
+    <div class="section-label"><span>当前笔记</span><button data-action="choose">切换笔记 <span>⌄</span></button></div>
+    <section id="active-note"></section>
+    <section id="note-tags" aria-label="笔记标签" hidden></section>
+    <section id="manual-summary" aria-label="核心摘要" hidden></section>
+    <section id="youtube-reading" hidden></section>
+    <section id="composer" hidden>
+      <div id="save-target" class="save-target" hidden></div>
+      <div id="pending-quote"></div>
+      <label for="thought">我的想法</label>
+      <textarea id="thought" rows="4" maxlength="20000" placeholder="写下想法，也可以直接粘贴截图…" aria-describedby="image-paste-hint"></textarea>
+      <div id="markdown-help"></div>
+      <div id="draft-images" class="draft-images" aria-label="本条记录的图片" hidden></div>
+      <p id="image-paste-hint" class="image-paste-hint">可粘贴或拖入图片</p>
+      <details class="screenshot-help"><summary>如何快速截图？</summary><p>Mac：⌃ ⇧ ⌘ 4 框选，回到这里按 ⌘ V。<br>Windows：Win ⇧ S 框选，再按 Ctrl V。<br>也可以通过「添加图片」选择文件。单张不超过 8 MB。</p></details>
+      <div class="compose-tools"><button data-action="clip" class="quiet">❝ 摘下选中文字</button><button data-action="image" class="quiet">＋ 添加图片</button><input id="image-file" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" hidden></div>
+      <div class="compose-footer"><span id="draft-status"></span><button class="primary" data-action="save" title="⌘ / Ctrl + Enter 保存">保存记录</button></div>
+    </section>
+    <section id="entries"></section>
+  </main>
+  <footer class="panel-footer"><span>Clips 0.12.1</span></footer>
+  <dialog id="save-context-dialog" aria-labelledby="save-context-title"></dialog>
+  <dialog id="image-viewer"><div class="dialog-head"><h2>记录中的图片</h2><button data-action="close-dialog" aria-label="关闭图片">×</button></div><div id="image-viewer-body"></div></dialog>
+  <dialog id="chooser"><div class="dialog-head"><h2>切换笔记</h2><button data-action="close-dialog" aria-label="关闭">×</button></div><p class="hint">切换笔记时，未保存的想法会留在各自的草稿里。</p><div id="note-options"></div></dialog>
+  <dialog id="settings"><div class="dialog-head"><h2>阅读设置</h2><button data-action="close-dialog" aria-label="关闭">×</button></div><section class="settings-service"><h3>YouTube 视频快捷入口</h3><p class="hint">视频右上角「记一笔」会保存当前时间附近的字幕。非中文引用会将附近字幕发送给 DeepSeek，自动补齐中文译文。开启后，每次打开 YouTube 自动显示；也可在视频页点击工具栏Clips图标，仅在本次页面使用。</p><button class="primary" data-action="yt-enable-entry">在 YouTube 显示快捷入口</button></section><section class="settings-service"><h3>YouTube 字幕 · Supadata</h3><p class="hint">点击读取时，仅发送视频链接给 Supadata。使用原生字幕；不会自动转录视频。</p><label>Supadata API Key<input id="supadata-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅在插件中填写"></label><label class="checkline"><input id="supadata-remember" type="checkbox">记住到本机（浏览器重启后仍可用）</label><p class="hint">默认随浏览器关闭而清除。Key 不上传到笔记库。</p><div id="supadata-state" class="hint"></div><div class="dialog-actions"><button class="quiet" data-action="clear-supadata">移除 Supadata Key</button><button class="primary" data-action="save-supadata">保存 Supadata</button></div></section><h3>阅读辅助 · DeepSeek</h3><p class="hint" id="settings-hint">使用你自己的 DeepSeek 账户。Overview 基于全部已保存字幕；翻译仅发送当前页缺失段落。摘要与理解使用你确认的页面上下文，均由你手动点击开始。</p><label>服务<input value="DeepSeek · api.deepseek.com" disabled></label><label>模型<input id="model" value="deepseek-flash" maxlength="200" autocomplete="off"></label><label>API Key<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅在此处填写"></label><label class="checkline"><input id="remember" type="checkbox">记住到本机（浏览器重启后仍可用）</label><p class="hint">默认随浏览器关闭而清除。勾选后保存在本机插件存储中；不会上传到笔记库，也不会随笔记导出。</p><div id="key-state" class="hint"></div><div class="dialog-actions"><button class="quiet" data-action="clear-key">移除 Key</button><button class="primary" data-action="save-settings">保存设置</button></div></dialog>
+  <dialog id="ai-dialog" aria-labelledby="ai-title">
+    <div class="dialog-head"><h2 id="ai-title">核心摘要</h2><button data-action="close-dialog" aria-label="关闭">×</button></div>
+    <p id="ai-target" class="summary-note-title"></p>
+    <label class="summary-source" for="ai-source">摘要来源
+      <select id="ai-source">
+        <option value="page">原文与随读记录</option>
+        <option value="records">仅随读记录</option>
+        <option value="supplement">仅补充信息</option>
+      </select>
+    </label>
+    <label for="ai-supplement" class="summary-label">我的补充 <span id="ai-optional">选填</span></label>
+    <textarea id="ai-supplement" rows="3" maxlength="40000" placeholder="可以补充背景、自己的判断，或写下希望摘要重点回答的问题。"></textarea>
+    <p id="ai-source-hint" class="hint"></p>
+    <div class="dialog-actions"><button class="quiet" data-action="settings">AI 设置</button><button class="primary" data-action="generate">生成摘要</button></div>
+    <section id="ai-result" aria-live="polite"></section>
+    <details id="ai-used" class="summary-used" hidden>
+      <summary>查看本次使用的材料</summary>
+      <p id="ai-scope" class="hint"></p>
+      <div id="ai-used-extra" hidden><strong>我的补充</strong><pre></pre></div>
+      <div id="ai-used-reading" hidden><strong>阅读材料</strong><pre></pre></div>
+      <div id="ai-images" class="source-images"></div>
+    </details>
+  </dialog>
+  <script type="module" src="panel.js"></script>
+</body></html>

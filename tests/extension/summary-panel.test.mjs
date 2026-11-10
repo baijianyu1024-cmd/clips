@@ -1,0 +1,80 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { parseHTML } from 'linkedom';
+const { window, document } = parseHTML(await readFile(new URL('../../extension/panel.html', import.meta.url), 'utf8'));
+globalThis.window = window; globalThis.document = document;
+window.HTMLElement.prototype.showModal = function() { this.setAttribute('open', ''); this.open = true; };
+window.HTMLElement.prototype.close = function() { this.removeAttribute('open'); this.open = false; this.dispatchEvent(new window.Event('close')); };
+Object.defineProperty(document.querySelector('#ai-source'), 'value', { value: 'page', writable: true });
+const { adapter } = await import('../../extension/adapter.js');
+const storage = new Map();
+let note = { id: 'note-a', title: '测试摘要', updatedAt: '2026-11-10T01:00:00Z', sources: [{ url: 'https://example.com/article' }], status: 'reading', revision: 1, tags: [], clips: [], images: [], aiSummaries: [], coreSummary: null, coreSummaryHistory: [] }, lose = false, writes = 0;
+const otherNote = { ...structuredClone(note), id: 'note-b', title: '另一篇笔记', sources: [{ url: 'https://example.com/other' }] };
+storage.set('activeNoteId', note.id);
+adapter.read = async key => structuredClone(storage.get(key)); adapter.write = async (key, value) => storage.set(key, structuredClone(value)); adapter.remove = async key => storage.delete(key);
+adapter.job = async id => structuredClone(storage.get('aiJob:' + id)); adapter.subscribe = () => {}; adapter.pending = async () => null;
+adapter.page = async () => ({ id: 1, url: 'https://example.com/article', title: 'article' });
+adapter.cloud = async request => {
+  if (!request.method) return { notes: [structuredClone(note), structuredClone(otherNote)], tagState: { revision: 0, tags: [] } };
+  const body = request.body; assert.equal(body.action, 'set_core_summary'); assert.equal(body.revision, note.revision);
+  assert.equal(body.expectedCoreSummaryId, note.coreSummary?.id || null);
+  writes++; if (note.coreSummary) note.coreSummaryHistory.push(note.coreSummary); note.coreSummary = body.coreSummary; note.revision++;
+  if (lose) { lose = false; throw Error('网络连接中断'); }
+  return { note: structuredClone(note) };
+};
+const interval = globalThis.setInterval; globalThis.setInterval = () => 1; await import('../../extension/panel.js'); globalThis.setInterval = interval;
+const flush = async () => { for (let i = 0; i < 12; i++) await new Promise(resolve => setImmediate(resolve)); };
+const click = async selector => { document.querySelector(selector).dispatchEvent(new window.Event('click', { bubbles: true })); await flush(); };
+function draft(id) { return { id, purpose: 'core', noteId: note.id, status: 'ready', provider: 'DeepSeek', text: '生成的正文', record: { id, text: '生成的正文', scope: '正文', createdAt: new Date().toISOString() } }; }
+await flush();
+test('legacy generated draft saves user edits without regenerating or discarding the draft on a lost response', async () => {
+  assert.equal(document.querySelector('#manual-summary [data-kind="core"]').textContent, '自己写');
+  assert.equal(document.querySelector('#manual-summary [data-action="ai"]').textContent, 'AI 生成');
+  assert.equal(document.querySelectorAll('[data-action="ai"]').length, 1);
+  storage.set('aiJob:' + note.id, draft('first'));
+  await click('[data-action="ai"]');
+  const output = document.querySelector('#ai-output'); output.value = '用户已手动去掉开头的摘要'; output.dispatchEvent(new window.Event('input', { bubbles: true }));
+  lose = true; await click('[data-action="save-ai"]');
+  assert.equal(storage.get('aiOutput:first'), output.value); assert.ok(storage.has('aiJob:' + note.id));
+  assert.equal(note.coreSummary.text, output.value);
+  assert.ok(document.querySelector('#manual-summary .core-summary-empty'), 'failed save does not claim a saved preview');
+  await click('[data-action="save-ai"]');
+  assert.equal(writes, 1); assert.equal(storage.has('aiJob:' + note.id), false); assert.equal(document.querySelector('#ai-dialog').open, false);
+  assert.equal(document.querySelector('#manual-summary .text').textContent.trim(), output.value);
+  assert.equal(document.querySelector('#manual-summary [data-kind="core"]').textContent, '编辑');
+  assert.equal(document.querySelector('#manual-summary [data-action="ai"]').textContent, '重新生成');
+});
+test('existing summary is displayed for review; explicit update retains the edited draft and old version', async () => {
+  storage.set('aiJob:' + note.id, draft('legacy-without-baseline'));
+  await click('[data-action="ai"]');
+  document.querySelector('#ai-output').value = '这次要保存的新摘要';
+  await click('[data-action="save-ai"]');
+  assert.equal(writes, 1); assert.match(document.querySelector('#ai-conflict').textContent, /用户已手动去掉开头/);
+  assert.equal(storage.get('aiOutput:legacy-without-baseline'), '这次要保存的新摘要');
+  await click('[data-action="replace-ai"]');
+  assert.equal(writes, 2); assert.equal(note.coreSummary.text, '这次要保存的新摘要');
+  assert.equal(note.coreSummaryHistory[0].text, '用户已手动去掉开头的摘要');
+  assert.equal(storage.has('aiJob:' + note.id), false);
+  assert.equal(document.querySelector('#manual-summary .text').textContent.trim(), '这次要保存的新摘要');
+});
+
+test('regeneration opens the existing flow without replacing the saved summary; switching notes shows their own content', async () => {
+  const before = structuredClone(note.coreSummary);
+  await click('#manual-summary [data-action="ai"]');
+  assert.equal(document.querySelector('#ai-dialog').open, true);
+  assert.equal(document.querySelector('[data-action="generate"]').textContent, '重新生成');
+  assert.equal(document.querySelector('#ai-output'), null);
+  assert.deepEqual(note.coreSummary, before);
+  assert.equal(document.querySelector('#manual-summary .text').textContent.trim(), before.text);
+  await click('#ai-dialog [data-action="close-dialog"]');
+  await click('[data-action="choose"]');
+  await click('[data-action="select-note"][data-id="note-b"]');
+  assert.ok(document.querySelector('#manual-summary .core-summary-empty'));
+  assert.equal(document.querySelector('#manual-summary .text'), null);
+  assert.equal(document.querySelector('#manual-summary [data-action="ai"]').textContent, 'AI 生成');
+  await click('[data-action="choose"]');
+  await click('[data-action="select-note"][data-id="note-a"]');
+  assert.equal(document.querySelector('#manual-summary .text').textContent.trim(), before.text);
+  assert.equal(writes, 2);
+});

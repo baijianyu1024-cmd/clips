@@ -1,0 +1,70 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { parseHTML } from 'linkedom';
+const { document, window } = parseHTML(await readFile(new URL('../../extension/panel.html', import.meta.url), 'utf8'));
+globalThis.window = window; globalThis.document = document;
+window.HTMLElement.prototype.showModal = function() { this.open = true; this.setAttribute('open', ''); };
+window.HTMLElement.prototype.close = function() { this.open = false; this.removeAttribute('open'); this.dispatchEvent(new window.Event('close')); };
+const { adapter } = await import('../../extension/adapter.js');
+const { draftImageStore } = await import('../../extension/image-drafts.js');
+const pages = Object.fromEntries(['a','b','c'].map(id => [id, { id, url: 'https://example.com/' + id, title: '文章 ' + id.toUpperCase() }]));
+const all = ['a','b'].map(id => ({ id, title: '文章 ' + id.toUpperCase(), sources: [{ url: pages[id].url }], revision: 1, tags: [], clips: [], aiSummaries: [], images: [], status: 'reading', updatedAt: '2026-11-10T00:00:00Z' }));
+const storage = new Map([['activeNoteId', 'a'], ['draft:b', { thought: 'B 先前的草稿', id: crypto.randomUUID() }]]), blobs = new Map();
+let current = pages.a, handler, writes = 0, imageDuringUpload;
+adapter.read = async key => structuredClone(storage.get(key)); adapter.write = async (key,value) => storage.set(key, structuredClone(value)); adapter.remove = async key => storage.delete(key);
+adapter.page = async () => structuredClone(current); adapter.pending = async () => null; adapter.subscribe = fn => handler = fn;
+adapter.cloud = async request => {
+  if (request.method !== 'PATCH') return { notes: structuredClone(all), tagState: { tags: [], revision: 0 } };
+  const n = all.find(n => n.id === request.body.id); assert.equal(request.body.action, 'add_clip');
+  assert.equal(request.body.revision, n.revision); writes++;
+  n.clips.push(structuredClone(request.body.clip)); n.revision++; return { note: structuredClone(n) };
+};
+draftImageStore.put = async(n,id,file) => blobs.set(n+id,file);
+draftImageStore.get = async(n,id) => { if (imageDuringUpload) { imageDuringUpload(); imageDuringUpload = null; } return blobs.get(n+id); };
+draftImageStore.remove = async(n,id) => blobs.delete(n+id);
+const realInterval = globalThis.setInterval; globalThis.setInterval = () => 1; await import('../../extension/panel.js'); globalThis.setInterval = realInterval;
+const flush = async () => { for (let i=0;i<15;i++) await new Promise(r => setImmediate(r)); };
+const click = async selector => { const b = document.querySelector(selector); assert.ok(b, selector); b.dispatchEvent(new window.Event('click',{bubbles:true})); await flush(); };
+const input = document.querySelector('#thought'), dialog = document.querySelector('#save-context-dialog');
+const write = async text => { input.value = text; input.dispatchEvent(new window.Event('input',{bubbles:true})); await flush(); };
+const navigate = async p => { current = p; handler('page'); await flush(); };
+await flush();
+test('keyboard save reads the live tab even before its activation event arrives; cancel retains draft', async () => {
+  await write('尚未保存的想法'); current = pages.b;
+  const key = new window.Event('keydown',{bubbles:true,cancelable:true}); Object.assign(key,{key:'Enter',ctrlKey:true}); input.dispatchEvent(key); await flush();
+  assert.equal(dialog.open,true); assert.equal(writes,0); assert.match(dialog.textContent,/文章 B/); assert.match(dialog.textContent,/文章 A/);
+  await click('[data-context-choice="cancel"]'); assert.equal(writes,0); assert.equal(storage.get('activeNoteId'),'a'); assert.equal(storage.get('draft:a').thought,'尚未保存的想法');
+  assert.equal(document.querySelector('#record-context').hidden,false); assert.equal(document.querySelector('[data-action="save"]').textContent,'确认保存…');
+});
+test('changing tabs while confirmation is open asks again instead of honoring stale consent', async () => {
+  await click('[data-action="save"]'); current = pages.c;
+  await click('[data-context-choice="save"]'); assert.equal(writes,0); assert.equal(dialog.open,true);
+  assert.match(dialog.textContent,/文章 C/); assert.match(dialog.textContent,/已变化/);
+  await click('[data-context-choice="cancel"]'); assert.equal(input.value,'尚未保存的想法');
+});
+test('writing on another article remains marked after switching back; choosing another note preserves both drafts', async () => {
+  await navigate(pages.b); await write('这是文章 B 的想法'); await navigate(pages.a);
+  assert.match(document.querySelector('#record-context').textContent,/草稿包含其他网页/);
+  await click('[data-action="save"]'); await click('[data-context-choice="switch"]');
+  assert.equal(writes,0); assert.equal(document.querySelector('#chooser').open,true);
+  await click('[data-action="select-note"][data-id="b"]');
+  assert.equal(storage.get('draft:a').thought,'这是文章 B 的想法'); assert.equal(input.value,'B 先前的草稿'); assert.equal(storage.get('activeNoteId'),'b');
+});
+test('matching-page save stays one click; every subsequent mismatched record requires confirmation', async () => {
+  await navigate(pages.b); await click('[data-action="save"]'); assert.equal(writes,1); assert.equal(all[1].clips[0].thought,'B 先前的草稿'); assert.equal(dialog.open,false);
+  await navigate(pages.a); await write('跨页记录 1'); await click('[data-action="save"]'); assert.equal(writes,1);
+  await click('[data-context-choice="save"]'); assert.equal(writes,2); assert.equal(input.value,'');
+  await write('跨页记录 2'); await click('[data-action="save"]'); assert.equal(writes,2); assert.equal(dialog.open,true);
+  dialog.dispatchEvent(new window.Event('cancel',{cancelable:true})); await flush(); assert.equal(writes,2); assert.equal(input.value,'跨页记录 2');
+});
+test('image-only save checks before upload and checks again if navigation occurs during image loading', async () => {
+  await write(''); await navigate(pages.b);
+  const file = new File(['image'],'capture.png',{type:'image/png'});
+  const paste = new window.Event('paste',{bubbles:true,cancelable:true}); paste.clipboardData = { items: [{kind:'file',type:file.type,getAsFile:()=>file}], getData:()=>'' }; input.dispatchEvent(paste); await flush();
+  assert.equal(storage.get('draft:b').attachments.length,1);
+  await navigate(pages.a); await click('[data-action="save"]'); assert.equal(writes,2);
+  imageDuringUpload = () => { current = pages.c; };
+  await click('[data-context-choice="save"]'); assert.equal(writes,2); assert.equal(dialog.open,true); assert.match(dialog.textContent,/文章 C/);
+  await click('[data-context-choice="cancel"]'); assert.equal(storage.get('draft:b').attachments.length,1); assert.ok(storage.get('draft:b').attachments[0].image,'successful upload checkpoint retained for retry');
+});
