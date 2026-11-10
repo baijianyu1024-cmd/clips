@@ -45,4 +45,3 @@ for (const file of ['background.js', 'panel.html', 'library.html', 'vendor/rich-
   assert.ok((await lstat(path.join(root, 'extension', file))).isFile(), `Missing extension file: ${file}`);
 }
 console.log(`Public-source checks passed (${checked} files, version ${manifest.version}).`);
-

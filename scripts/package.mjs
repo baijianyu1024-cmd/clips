@@ -39,4 +39,3 @@ const digest = createHash('sha256').update(zipped).digest('hex');
 await writeFile(path.join(dist, 'SHA256SUMS.txt'), `${digest}  ${zipName}\n`);
 console.log(`Packaged ${Object.keys(files).length} files; ${(zipped.length / 1024).toFixed(0)} KiB. ZIP round-trip verified.`);
 console.log(`SHA256: ${digest}`);
-

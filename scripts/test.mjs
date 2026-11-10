@@ -4,4 +4,3 @@ const tests = (await readdir('tests/extension')).filter(file => file.endsWith('.
 const result = spawnSync(process.execPath, ['--test', ...tests], { stdio: 'inherit' });
 if (result.error) throw result.error;
 process.exitCode = result.status ?? 1;
-

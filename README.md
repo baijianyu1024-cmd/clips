@@ -4,7 +4,7 @@
 
 Clips 是一个 Chrome 扩展，包含侧边栏和本地笔记库。**不需要 ChatGPT 账号、不需要部署服务器。** 普通记录无需 API Key；AI 功能使用你自己配置的 DeepSeek / Supadata 账号。
 
-[下载安装包](https://github.com/baijianyu1024-cmd/clips/releases/latest/download/clips-chrome-extension.zip) · [所有版本](https://github.com/baijianyu1024-cmd/clips/releases) · [隐私说明](PRIVACY.md) · [参与开发](CONTRIBUTING.md)
+[下载安装包](https://github.com/baijianyu1024-cmd/clips/releases/latest/download/clips-chrome-extension.zip) · [所有版本](https://github.com/baijianyu1024-cmd/clips/releases) · [隐私说明](PRIVACY.md) · [自行二次开发](DEVELOPMENT.md)
 
 ## 功能
 
@@ -70,7 +70,10 @@ My Clips/
 - 插件设置页、浏览器内置 PDF 阅读器等页面可能不允许注入脚本。
 - 本仓库仅包含可独立运行的本地版；不包含作者个人云端站点、托管配置、笔记数据或私人部署历史。
 
-## 开发
+## 自行二次开发
+
+**原仓库由作者维护。** 开源不代表开放原仓库的写入权限。你可以点击 GitHub 上的 **Fork** 将项目复制到自己的账号，再克隆自己的仓库并独立修改、发布；这些改动不会影响原仓库或作者的笔记。也可以直接下载源码进行本地修改。
+
 
 需要 Node.js 22.13 或更新版本与 npm：
 
@@ -98,4 +101,3 @@ npm run package
 项目使用 [MIT License](LICENSE)，允许修改、分发和二次开发，请保留许可证与版权声明。
 
 YouTube 阅读功能参考并改编了 [Zara Zhang 的 youtube-digest](https://github.com/zarazhangrui/youtube-digest)。编辑和渲染使用 Tiptap、ProseMirror、Marked 与 markdown-it。完整声明见 [THIRD_PARTY_NOTICES](extension/THIRD_PARTY_NOTICES.txt) 和 `extension/vendor/` 中的许可证；这些声明也包含在安装包内。
-
