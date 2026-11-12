@@ -1,3 +1,5 @@
+import { createLearningEngine } from "./learning-engine.js";
+import { retainMaterial } from "./learning-capture.js";
 import { getTarget, targetKey, assertTarget, scopedStorage, folderHandle } from './storage-target.js';
 import { createFolderRepository } from './folder-store.js';
 import { readPageContent } from "./page-content.js";
@@ -155,12 +157,14 @@ function servicesFor(target) {
     const results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readYoutubePlayer, args: [youtubeId(tab.url)] });
     return results[0]?.result || { available: false };
   }});
-  const value = { storage, cloud, translateQuote, quickQuotes }; services.set(id, value); return value;
+  const learning = createLearningEngine({ request: cloud, storage, credentials: getConfig, allowed: () => chrome.permissions.contains({ origins: ["https://api.deepseek.com/*"] }) });
+  const value = { storage, cloud, translateQuote, quickQuotes, learning }; services.set(id, value); return value;
 }
 async function dispatch(message) {
   const target = await getTarget();
   if (message.context !== undefined && message.context !== targetKey(target)) throw new Error('资料库已切换，请重新打开侧栏。草稿仍保留在原资料库。');
-  const { storage, cloud, translateQuote, quickQuotes } = servicesFor(target);
+  const { storage, cloud, translateQuote, quickQuotes, learning } = servicesFor(target);
+  if (message.type === "LEARNING") { const timer=setInterval(()=>chrome.runtime.getPlatformInfo(),20000); try { return await learning(message.action,message.input); } finally { clearInterval(timer); } }
   if (message.type === "TRANSLATE_CLIP") return translateQuote(message.noteId, message.clipId);
   if (message.type === "YOUTUBE_ENTRY_INIT") {
     const [tab] = await chrome.tabs.query({ active: true, windowId: message.windowId });
@@ -177,7 +181,11 @@ async function dispatch(message) {
   if (message.type === "YOUTUBE_PLAYBACK") return youtubePlayback(message.videoId, message.windowId);
   if (message.type === "YOUTUBE_SEEK") return seekYoutube(message.videoId, message.time, message.windowId);
   if (message.type === "CLOUD") return cloud(message.request);
-  if (message.type === "CAPTURE") return capture(message.tabId, message.mode);
+  if (message.type === "CAPTURE") {
+    const result = await capture(message.tabId, message.mode);
+    if (["body","material"].includes(message.mode)) try { return await retainMaterial(result,{storage,request:cloud}); } catch { return {...result,reason:(result.reason||"")+" 本次原文未能留存，后续对话暂不能使用这份新材料。"}; }
+    return result;
+  }
   if (message.type === "CONFIG_GET") { const { config, key, remember } = await getConfig(); return { ...config, configured: !!key, remember }; }
   if (message.type === "CONFIG_SAVE") return saveConfig(message.input);
   if (message.type === "CONFIG_CLEAR") { await chrome.storage.local.remove("savedApiKey"); await chrome.storage.session.remove("apiKey"); return {}; }
@@ -221,7 +229,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     Promise.resolve(task).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "引用失败，请重试。" }));
     return true;
   }
-  if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
+  if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html', 'learning.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
   dispatch(message).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "操作失败，请重试。", status: error.status }));
   return true;
 });

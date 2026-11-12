@@ -37,7 +37,8 @@ export async function imageForAI(dataUrl, label, rect = null, viewport = null) {
   } finally { bitmap.close(); }
 }
 const samePage = (a, b) => String(a).split("#")[0] === String(b).split("#")[0];
-// Called only by an explicit AI action. No background capture, scrolling, or persistence.
+// Called only by an explicit AI action. No background capture or scrolling.
+// The caller may retain the acquired material in the matching active note.
 export async function captureMaterial(tabId, api = chrome, crop = imageForAI) {
   const result = (await api.scripting.executeScript({ target: { tabId }, func: readPageContent, args: ["material"] }))[0]?.result;
   if (!result) throw new Error("未能获取当前阅读材料。");

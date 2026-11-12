@@ -3,6 +3,7 @@ import { titleUrlKey, cleanPageTitle } from './link-metadata.js';
 import { quoteRangeKey, anchoredTranscriptText } from './quote-context.js';
 import { youtubeId } from './youtube.js';
 import { validateTag } from './note-tags.js';
+import {validateChat,validateCapture} from './learning-model.js';
 
 const FILE = 'clips.json';
 const now = () => new Date().toISOString();
@@ -107,9 +108,39 @@ export function createFolderRepository(root, id, lock = task => task()) {
     await write(root,FILE,JSON.stringify(data,null,2));
   }
   async function request({path='/api/notes',method='GET',body={}}={}) {
-    if(!['/api/notes','/api/tags','/api/media','/api/transcripts'].includes(path.split('?')[0]) || !['GET','POST','PATCH'].includes(method)) throw new Error('不支持的资料库请求。');
+    if(!['/api/notes','/api/tags','/api/media','/api/transcripts','/api/learning','/api/materials'].includes(path.split('?')[0]) || !['GET','POST','PATCH'].includes(method)) throw new Error('不支持的资料库请求。');
     return lock(async()=>{
       const old=await load(), data=structuredClone(old), prefix=await sha256(id);
+      if(path.startsWith('/api/learning')){
+        const chatId=new URL(path,'https://clips.local').searchParams.get('id');
+        if(method==='GET'){
+          if(chatId){if(!uuid(chatId))throw new Error('对话标识无效');return {chat:await readJSON(root,'conversations/'+chatId+'.json',true)};}
+          let dir;try{dir=await root.getDirectoryHandle('conversations');}catch(e){if(e.name==='NotFoundError')return {chats:[]};throw e;}
+          const chats=[];for await(const [name,entry] of dir.entries()){if(entry.kind==='file'&&/^[a-f0-9-]{36}\.json$/.test(name)){const c=validateChat(await readJSON(root,'conversations/'+name));chats.push({id:c.id,title:c.title,revision:c.revision,updatedAt:c.updatedAt});}}
+          return {chats:chats.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,100)};
+        }
+        if(method!=='POST')throw new Error('不支持的对话操作');
+        const chat=validateChat(body.chat);if(chat.materials.some(m=>m.imageKey&&!m.imageKey.startsWith(prefix+'/')))throw new Error('图片不属于当前资料库');
+        const file='conversations/'+chat.id+'.json',previous=await readJSON(root,file,true);
+        if((previous?.revision||0)!==chat.revision)conflict();
+        const next={...chat,revision:chat.revision+1,updatedAt:now()};
+        if(previous)await write(root,'backups/chat-'+chat.id+'.json',JSON.stringify(previous));
+        await write(root,file,JSON.stringify(next,null,2));return {chat:next};
+      }
+      if(path.startsWith('/api/materials')){
+        const noteId=body.noteId||new URL(path,'https://clips.local').searchParams.get('note');
+        const note=data.notes.find(n=>n.id===noteId);if(!note||note.deletedAt)throw new Error('笔记不存在');
+        if(method==='GET'){
+          const metas=(data.materials||[]).filter(s=>s.noteId===noteId).slice(-12).reverse();
+          return {snapshots:await Promise.all(metas.map(m=>readJSON(root,'materials/'+m.id+'.json')))};
+        }
+        if(method!=='POST')throw new Error('不支持的材料操作');
+        const snapshot=validateCapture(body,note,prefix);
+        if((data.materials||[]).some(m=>m.id===snapshot.id))return {saved:true};
+        for(const b of snapshot.blocks)if(b.imageKey)await fileAt(root,'images/'+b.imageKey);
+        await write(root,'materials/'+snapshot.id+'.json',JSON.stringify(snapshot,null,2));
+        data.materials=[...(data.materials||[]),{id:snapshot.id,noteId,createdAt:snapshot.createdAt}];await commit(data,old);return {saved:true};
+      }
       if(path.startsWith('/api/media')) {
         if(method==='GET') {
           const key=new URL(path,'https://clips.local').searchParams.get('key');

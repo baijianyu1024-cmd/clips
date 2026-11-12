@@ -669,6 +669,7 @@ async function init() {
   if (await adapter.pending()) notice("有一段右键暂存的摘录。开始笔记后，点「摘下选中文字」加入草稿。");
   await restoreImageDraft(); render();
   await renderQuickQuotes();
+  if (native && new URL(location.href).searchParams.has('settings')) await showSettings();
   if (native) { adapter.youtubeEntry().catch(() => {}); await consumeRecordEdit(); }
 }
 init().catch(e => notice(e.message, true));
