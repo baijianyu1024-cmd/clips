@@ -162,3 +162,10 @@ test('IM payload pairs attachments with the correct user turn and uses vision fo
  assert.throws(()=>understandingPrompt({...input,turns:Array(5).fill({question:'q',answer:'a'.repeat(16000)})}),/对话较长/);
  const summary=understandingThoughtPrompt({turns});assert.equal(JSON.parse(summary[1].content).turns[0].source,'第一段');assert.doesNotMatch(summary[1].content,/base64/);assert.match(summary[0].content,/后续澄清和纠正/);
 });
+test('sidebar clears sent text immediately, renders streaming reply, and restores drafts on failure',async()=>{
+ const h=setup();let finish,progress;h.adapter.understand=(_input,onProgress)=>{progress=onProgress;return new Promise((resolve,reject)=>finish={resolve,reject});};
+ const input=document.querySelector('#understand-message');input.value='什么是 RAG？';input.dispatchEvent(new window.Event('input'));
+ document.querySelector('[data-reading-action=send]').click();assert.equal(input.value,'');assert.match(document.querySelector('.understand-result').textContent,/什么是 RAG/);
+ await flush();progress({text:'**检索增强生成**'});assert.equal(document.querySelector('.understand-message.assistant strong').textContent,'检索增强生成');
+ finish.reject(Error('网络中断'));await flush();assert.equal(input.value,'什么是 RAG？');assert.equal(document.querySelectorAll('.understand-message').length,0);
+});

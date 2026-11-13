@@ -58,8 +58,8 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
   function renderChat() {
     renderActions();
     const log=$('.understand-result'),nearBottom=log.scrollHeight-log.scrollTop-log.clientHeight<60;
-    const content=(conversation?.turns||[]).map(turn=>messageHTML(turn)+`<article class="understand-message assistant"><div class="markdown-body">${renderMarkdown(turn.answer)}</div>${turn.warning?`<p class="hint">${esc(turn.warning)}</p>`:''}</article>`).join('')+(pending?messageHTML(pending):'');
-    if(log.innerHTML!==content){log.innerHTML=content;if(nearBottom||pending)log.scrollTop=log.scrollHeight;}
+    const content=(conversation?.turns||[]).map(turn=>messageHTML(turn)+`<article class="understand-message assistant"><div class="markdown-body">${renderMarkdown(turn.answer)}</div>${turn.warning?`<p class="hint">${esc(turn.warning)}</p>`:''}</article>`).join('')+(pending?messageHTML(pending)+`<article class="understand-message assistant" aria-busy="true"><div class="markdown-body">${pending.answer?renderMarkdown(pending.answer):'<span class="hint">正在思考…</span>'}</div></article>`:'');
+    if(log.innerHTML!==content){log.innerHTML=content;if(nearBottom)log.scrollTop=log.scrollHeight;}
     $('.understand-status').textContent=chatError||(addingImages?'正在添加图片…':selecting?'正在引用…':requestPending?'正在回答…':'');
     $('.understand-status').classList.toggle('error',!!chatError);
   }
@@ -109,7 +109,8 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
     if(asked.length>4000)throw new Error('消息最多 4,000 字。');
     const capturedKey=key,seq=++explanation;
     const turn={question:asked||(quote?'帮我解释这段引用':'帮我解释这张图片'),source:quote?.text||'',quoteContext:quote?.context||'',manualImages};
-    pending=turn;requestPending=true;chatError='';renderChat();
+    const sentImages=draftImages;
+    pending=turn;requestPending=true;chatError='';input.value='';draftQuote=null;draftImages=[];renderDraft();renderChat();$('.understand-result').scrollTop=$('.understand-result').scrollHeight;
     try{
       if(!(await adapter.config()).configured){await settings();throw new Error('配置 DeepSeek 后即可开始对话。');}
       if(seq!==explanation||!await stillCurrent(capturedKey))return;
@@ -126,7 +127,7 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
       if(allImages.length>MAX_IMAGES)throw new Error(`本次对话最多 ${MAX_IMAGES} 张图片，请先保存想法，再开始新对话。`);
       validImages(allImages);
       $('.understand-status').textContent='正在回答…';
-      const result=await adapter.understand({chat:true,question:turn.question,source:turn.source,quoteContext:turn.quoteContext,images:turn.images,title:current.title,context:current.context,scope:current.scope,turns:current.turns.map(requestTurn)});
+      const result=await adapter.understand({chat:true,question:turn.question,source:turn.source,quoteContext:turn.quoteContext,images:turn.images,title:current.title,context:current.context,scope:current.scope,turns:current.turns.map(requestTurn)},progress=>{if(seq===explanation&&key===capturedKey&&pending===turn){turn.answer=progress.text||'';renderChat();}});
       if(seq!==explanation||!await stillCurrent(capturedKey))return;
       current.turns.push({...turn,answer:result.text,warning:result.warning});
       const sources=current.turns.filter(item=>item.source).map(item=>item.source).join('\n\n');
@@ -134,7 +135,7 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
       input.value='';draftQuote=null;draftImages=[];pending=null;
       if(!thoughtDraft)$('.understand-save-status').textContent='';
       renderDraft();renderSource();
-    }catch(error){if(seq===explanation&&await stillCurrent(capturedKey)){chatError=error.message;pending=null;}}
+    }catch(error){if(seq===explanation&&await stillCurrent(capturedKey)){chatError=error.message;input.value=asked;draftQuote=quote;draftImages=sentImages;pending=null;renderDraft();}}
     finally{if(seq===explanation){requestPending=false;renderChat();}}
   }
   async function prepareThought() {
@@ -166,9 +167,7 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
     validateImageBatch(files);
     const used=conversation?.turns.flatMap(turn=>turn.images||[]).length||0;
     if(used+draftImages.length+files.length>MAX_IMAGES)throw new Error(`本次对话最多 ${MAX_IMAGES} 张图片，请先保存想法，再开始新对话。`);
-    const capturedKey = key;
-    const seq = explanation;
-    addingImages = true; chatError = ''; renderChat();
+    const capturedKey=key,seq=explanation;addingImages=true;chatError='';renderChat();
     try{
       const added=[];for(const file of files)added.push({...await prepareImage(await blobDataUrl(file),file.name||'图片'),id:crypto.randomUUID()});
       if(seq!==explanation||!await stillCurrent(capturedKey))return;

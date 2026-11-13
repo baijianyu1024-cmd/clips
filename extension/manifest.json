@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Clips",
   "description": "记录阅读摘录、想法和图片，保存视频引用并回顾笔记。",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",

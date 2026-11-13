@@ -1,3 +1,4 @@
+import {readCompletion} from './ai-stream.js';
 import { withImages, validImages, MAX_IMAGES } from "./visual-material.js";
 
 export function conversationTurns(value = [], maxCharacters = 80000) {
@@ -66,7 +67,7 @@ export function understandingThoughtPrompt(input) {
 }
 
 // No storage or note-writing dependencies: an explanation lives only in the open panel.
-export async function explainReading(input, { credentials, allowed, fetcher = fetch }) {
+export async function explainReading(input, { credentials, allowed, fetcher = fetch, onProgress }) {
   const messages = input.purpose === 'thought' ? understandingThoughtPrompt(input) : understandingPrompt(input);
   const { config, key } = await credentials();
   if (!key) throw new Error("先在阅读设置中填写 DeepSeek API Key。");
@@ -74,10 +75,16 @@ export async function explainReading(input, { credentials, allowed, fetcher = fe
   try {
     const response = await fetcher("https://api.deepseek.com/chat/completions", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: messages.some(message=>Array.isArray(message.content)) ? "deepseek-flash" : config.model, messages, stream: false, max_tokens: 1800, temperature: 0.2, thinking: { type: "disabled" } }),
+      body: JSON.stringify({ model: messages.some(message=>Array.isArray(message.content)) ? "deepseek-flash" : config.model, messages, stream: !!onProgress, max_tokens: 1800, temperature: 0.2, thinking: { type: "disabled" } }),
       signal: AbortSignal.timeout(60000), redirect: "error",
     });
     if (!response.ok) throw new Error(({ 401: "API Key 无效，请更新阅读设置。", 402: "DeepSeek 余额不足。", 429: "请求过于频繁，请稍后重试。" })[response.status] || `DeepSeek 请求失败（${response.status}），请检查模型设置后重试。`);
+    if(onProgress){
+      const result=await readCompletion(response,text=>onProgress({text}));
+      if(!result.text.trim())throw new Error('未返回解释，请重试。');
+      if(!['stop','length'].includes(result.finish))throw new Error('回复未完成，请重试。');
+      return {text:result.text.trim().slice(0,16000),warning:result.finish==='length'?'回答达到输出上限，可以追问「继续」。':''};
+    }
     let data;
     try { data = await response.json(); } catch { throw new Error("DeepSeek 未返回有效结果，请稍后重试。"); }
     const result = data.choices?.[0];

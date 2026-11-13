@@ -7,7 +7,7 @@ const event = name => ({ addListener: f => { listeners[name] = f; } });
 let allowed = true;
 globalThis.chrome = {
   storage: { local: storage(local), session: storage(session) },
-  runtime: { id: "test-extension", getURL: p => "chrome-extension://test-extension/" + p, getPlatformInfo: async () => ({}), onInstalled: event("installed"), onMessage: event("message") },
+  runtime: { id: "test-extension", getURL: p => "chrome-extension://test-extension/" + p, getPlatformInfo: async () => ({}), onConnect: event("connect"), onInstalled: event("installed"), onMessage: event("message") },
   action: { onClicked: event("action") }, commands: { onCommand: event("command") }, contextMenus: { onClicked: event("context"), removeAll: f => f(), create: () => {} },
   permissions: { contains: async () => allowed },
   tabs: { query: async () => [{ id: 10, url: "https://example.test/", status: "complete" }] },
@@ -102,4 +102,11 @@ test("subtitle retries reuse the successful pending result and never change the 
   assert.equal(first.ok, true); assert.equal(second.ok, true); assert.equal(calls, 1); assert.equal(first.data.videoId, message.videoId); assert.equal(local.activeNoteId, "B");
   assert.equal(first.data.segments[0].start, 12);
   await dispatch({ type: "TRANSCRIPT_CONFIG_CLEAR" }); assert.equal(session.supadataKey, undefined); assert.equal(local.savedSupadataKey, undefined);
+});
+
+test('stream ports reject foreign pages, forbidden actions and stale storage contexts',async()=>{
+ function port(sender){const out=[];let receive,closed=false;const p={name:'clips-ai-stream',sender,onDisconnect:{addListener:()=>{}},onMessage:{addListener:f=>receive=f},disconnect:()=>closed=true,postMessage:m=>out.push(m)};listeners.connect(p);return {out,get closed(){return closed},send:m=>receive(m)};}
+ assert.equal(port({id:chrome.runtime.id,url:'https://evil.invalid',frameId:0,tab:{id:1}}).closed,true);
+ const p=port(own);p.send({type:'CONFIG_GET'});await new Promise(r=>setImmediate(r));assert.equal(p.out[0].ok,false);
+ const stale=port(own);stale.send({type:'UNDERSTAND',context:'other-folder',input:{question:'问题'}});await new Promise(r=>setImmediate(r));assert.match(stale.out[0].error,/资料库已切换/);
 });

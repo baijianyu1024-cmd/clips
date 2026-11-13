@@ -192,3 +192,9 @@ $('#add-images').onclick=()=>$('#image-files').click();$('#image-files').onchang
 $('#editor').onpaste=e=>{const files=transferImages(e.clipboardData);if(files.length&&!$('#image-tools').hidden){e.preventDefault();run(()=>addImages(files),$('#editor-error'));}};
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.clipsStorageTarget&&targetKey(changes.clipsStorageTarget.newValue)!==targetKey(target)){notice('资料库已切换。本页保留原资料库的草稿；请关闭后重新打开。');document.querySelectorAll('button').forEach(b=>b.disabled=true);}});
 await refresh();const requestedNote=new URL(location.href).searchParams.get('note');if(requestedNote&&notes.some(n=>n.id===requestedNote)){detail=requestedNote;render();}if(new URL(location.href).searchParams.has('settings'))showSettings();
+
+const navigation=new URL(location.href).searchParams;
+if(['records','notes','inbox','archive','trash'].includes(navigation.get('view'))){view=navigation.get('view');document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===view));render();}
+if(navigation.has('tag')){filter=navigation.get('tag');render();}
+if(navigation.has('new'))void run(()=>openEditor('new'));
+if(navigation.get('manage')==='tags')void run(()=>openEditor('tags'));

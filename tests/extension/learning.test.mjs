@@ -54,3 +54,23 @@ test('material dialog shows each fragment, defaults to actual inputs, and citati
  const root=window.document.querySelector('#root');const dispose=mountLearning(root,{libraryURL:'/',noteURL:x=>'/?note='+x,chatId:cid,request:async q=>q.path==='/api/notes'?{notes:[]}:q.path.includes('?id=')?{chat}:{chats:[chat]},run:async()=>({configured:true})});
  await new Promise(r=>setTimeout(r,30));root.querySelector('[data-ref]').click();assert.equal(root.querySelector('#learn-materials').open,true);assert.equal(root.querySelectorAll('.learn-material').length,1);assert.equal(root.querySelector('.highlight').id,'material-'+one);root.querySelector('[data-material-tab="all"]').click();assert.equal(root.querySelectorAll('.learn-material').length,2);assert.ok(root.textContent.includes('未用于本轮'));assert.ok(!root.textContent.includes('查看引用'));dispose();dom.window.close();
 });
+test('learning sends immediately, streams Markdown and only referenced thumbnails, with safe retry',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://clips.local/learn'}),root=dom.window.document.querySelector('#root'),wait=()=>new Promise(r=>setTimeout(r,10));
+ dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};let progress,finish,captured;
+ const dispose=mountLearning(root,{libraryURL:'/',noteURL:x=>'/?note='+x,request:async q=>q.path==='/api/notes'?{notes:[]}:{chats:[]},image:async key=>'data:image/png;base64,'+key,run:(action,input,p)=>action==='status'?Promise.resolve({configured:true}):new Promise((resolve,reject)=>{captured=input;progress=p;finish={resolve,reject};})});
+ await wait();const input=root.querySelector('#learn-question');input.value='解释图中的架构';root.querySelector('#learn-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+ assert.equal(input.value,'');assert.equal(root.querySelector('.learn-question').textContent,'解释图中的架构');assert.equal(root.querySelector('.learn-answer').getAttribute('aria-busy'),'true');
+ const materials=[{id:'a',kind:'image',imageKey:'AAA',title:'架构图'},{id:'b',kind:'image',imageKey:'BBB',title:'无关图'}];progress({answer:[{text:'### 架构\n使用 `run_code`。',type:'evidence',references:['a']},{text:'第二段',type:'evidence',references:['a']}],materials});await wait();
+ assert.equal(root.querySelectorAll('[data-answer-image]').length,1);assert.equal(root.querySelector('.clips-markdown code').textContent,'run_code');assert.ok(root.querySelector('.clips-markdown h3'));root.querySelector('[data-image-key]').click();await wait();assert.equal(root.querySelector('#learn-image-dialog').open,true);
+ const turnId=captured.turnId;finish.reject(Error('连接中断'));await wait();assert.equal(input.value,'解释图中的架构');assert.equal(root.querySelectorAll('.learn-turn').length,0);
+ root.querySelector('#learn-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));assert.equal(captured.turnId,turnId);
+ finish.resolve({chat:{id:captured.chatId,title:'架构',revision:1,materials,turns:[{id:turnId,question:captured.question,used:['a'],retrieved:['a','b'],answer:[{text:'回答',type:'evidence',references:['a']}]}]}});await wait();assert.equal(root.querySelectorAll('.learn-question').length,1);assert.equal(input.value,'');assert.ok(root.querySelector('.learn-history-panel #learn-history'));assert.equal(root.querySelector('.learn-nav'),null);dispose();dom.window.close();
+});
+test('learning streams complete validated paragraphs before saving, never unfinished output',async t=>{
+ const s=await setup(t),seen=[];let payload;
+ const run=engine(s,{fetcher:async(_u,o)=>{const b=JSON.parse(o.body);if(b.max_tokens===500)return aiReply({queries:['Agent']});assert.equal(b.stream,true);payload=b;
+ const result={paragraphs:[{text:'## 任务状态\n用 **状态** 接续执行。',type:'evidence',references:[1]}]},json=JSON.stringify(result);
+ const event=content=>'data: '+JSON.stringify({choices:[{delta:{content}}]})+'\n\n';
+ return new Response(event(json.slice(0,-2))+event(json.slice(-2))+'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');}});
+ const result=await run('ask',{chatId:id(),turnId:id(),revision:0,question:'Agent 状态'},p=>seen.push(p));assert.equal(seen.filter(p=>p.answer).length,1);assert.equal(seen.find(p=>p.answer).answer[0].references[0],result.chat.turns[0].answer[0].references[0]);assert.match(payload.messages[0].content,/必须使用 Markdown/);
+});

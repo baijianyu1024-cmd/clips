@@ -1,3 +1,4 @@
+import {streamRequest} from './stream-request.js';
 import { getTarget, targetKey, scopedStorage } from './storage-target.js';
 import { youtubeUrl } from "./youtube.js";
 import { validateTag } from "./note-tags.js";
@@ -115,7 +116,7 @@ export const adapter = native ? {
   saveConfig: input => send({ type: "CONFIG_SAVE", input }),
   allowAI: () => chrome.permissions.request({ origins: ["https://api.deepseek.com/*"] }),
   clearKey: () => send({ type: "CONFIG_CLEAR" }),
-  understand: input => send({ type: "UNDERSTAND", input }),
+  understand: async (input,onProgress) => streamRequest({type:"UNDERSTAND",input,context:targetKey(await currentTarget())},onProgress),
   generate: input => send({ type: "AI_GENERATE", input }),
   job: noteId => send({ type: "JOB_GET", noteId }),
   pending: async () => (await chrome.storage.session.get("pendingSelection")).pendingSelection || null,

@@ -160,11 +160,11 @@ function servicesFor(target) {
   const learning = createLearningEngine({ request: cloud, storage, credentials: getConfig, allowed: () => chrome.permissions.contains({ origins: ["https://api.deepseek.com/*"] }) });
   const value = { storage, cloud, translateQuote, quickQuotes, learning }; services.set(id, value); return value;
 }
-async function dispatch(message) {
+async function dispatch(message,onProgress) {
   const target = await getTarget();
   if (message.context !== undefined && message.context !== targetKey(target)) throw new Error('资料库已切换，请重新打开侧栏。草稿仍保留在原资料库。');
   const { storage, cloud, translateQuote, quickQuotes, learning } = servicesFor(target);
-  if (message.type === "LEARNING") { const timer=setInterval(()=>chrome.runtime.getPlatformInfo(),20000); try { return await learning(message.action,message.input); } finally { clearInterval(timer); } }
+  if (message.type === "LEARNING") { const timer=setInterval(()=>chrome.runtime.getPlatformInfo(),20000); try { return await learning(message.action,message.input,onProgress); } finally { clearInterval(timer); } }
   if (message.type === "TRANSLATE_CLIP") return translateQuote(message.noteId, message.clipId);
   if (message.type === "YOUTUBE_ENTRY_INIT") {
     const [tab] = await chrome.tabs.query({ active: true, windowId: message.windowId });
@@ -189,7 +189,7 @@ async function dispatch(message) {
   if (message.type === "CONFIG_GET") { const { config, key, remember } = await getConfig(); return { ...config, configured: !!key, remember }; }
   if (message.type === "CONFIG_SAVE") return saveConfig(message.input);
   if (message.type === "CONFIG_CLEAR") { await chrome.storage.local.remove("savedApiKey"); await chrome.storage.session.remove("apiKey"); return {}; }
-  if (message.type === "UNDERSTAND") return explainReading(message.input || {}, { credentials: getConfig, allowed: () => chrome.permissions.contains({ origins: ["https://api.deepseek.com/*"] }) });
+  if (message.type === "UNDERSTAND") return explainReading(message.input || {}, { credentials: getConfig, allowed: () => chrome.permissions.contains({ origins: ["https://api.deepseek.com/*"] }), onProgress });
   if (message.type === "AI_GENERATE") return generate(message.input, storage);
   if (message.type === "JOB_GET") {
     const key = "aiJob:" + message.noteId, saved = (await storage.get(key))[key];
@@ -232,4 +232,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html', 'learning.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
   dispatch(message).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "操作失败，请重试。", status: error.status }));
   return true;
+});
+
+chrome.runtime.onConnect.addListener(port=>{
+ if(port.name!=='clips-ai-stream')return;
+ const sender=port.sender;
+ const native=sender?.id===chrome.runtime.id&&['panel.html','library.html','learning.html'].some(page=>sender.url?.split('?')[0].split('#')[0]===chrome.runtime.getURL(page));
+ if(!native){port.disconnect();return;}
+ let disconnected=false,started=false;
+ port.onDisconnect.addListener(()=>{disconnected=true;});
+ const emit=value=>{if(!disconnected)try{port.postMessage(value);}catch{disconnected=true;}};
+ port.onMessage.addListener(message=>{
+  if(started)return;started=true;
+  (async()=>{
+   if(!['LEARNING','UNDERSTAND'].includes(message.type)||message.type==='LEARNING'&&message.action!=='ask')throw new Error('不支持的对话请求。');
+   if(typeof message.context!=='string')throw new Error('资料库标识缺失，请重新打开。');
+   return dispatch(message,data=>emit({type:'progress',data}));
+  })().then(data=>emit({type:'result',ok:true,data})).catch(e=>emit({type:'result',ok:false,error:e.message,status:e.status}));
+ });
 });
