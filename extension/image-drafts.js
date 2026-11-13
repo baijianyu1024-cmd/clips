@@ -65,5 +65,7 @@ export async function uploadDraftImages(noteId, attachments, upload, checkpoint,
   return result;
 }
 export function sameDiscovery(saved, clip) {
-  return saved.text === clip.text.trim() && saved.thought === clip.thought.trim() && saved.sourceUrl === clip.sourceUrl && JSON.stringify((saved.images || []).map(i => i.key)) === JSON.stringify((clip.images || []).map(i => i.key));
+  // Cloud normalizes surrounding whitespace; local files preserve the editor's Markdown.
+  const normalized = value => String(value ?? '').trim();
+  return normalized(saved.text) === normalized(clip.text) && normalized(saved.thought) === normalized(clip.thought) && saved.sourceUrl === clip.sourceUrl && JSON.stringify((saved.images || []).map(i => i.key)) === JSON.stringify((clip.images || []).map(i => i.key));
 }

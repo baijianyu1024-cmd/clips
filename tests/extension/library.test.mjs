@@ -19,8 +19,16 @@ test('local library creates, edits, recovers a conflict, and reloads actual fold
  await import('../../extension/library.js');
  const $=s=>document.querySelector(s),until=async pred=>{for(let i=0;i<150;i++){if(pred())return;await new Promise(r=>setTimeout(r,10));}assert.fail('Timed out: '+document.querySelector('#editor-error').textContent);};
  const click=s=>$(s).click(),input=(name,value)=>{$(`[name="${name}"]`).value=value;$(`[name="${name}"]`).dispatchEvent(new window.Event('input',{bubbles:true}));},submit=()=>$('#edit-form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+ assert.deepEqual([...document.querySelectorAll('.sidebar nav span')].map(x=>x.textContent),['笔记库','待阅读','对话']);
+ assert.equal($('.sidebar [aria-current="page"]').dataset.nav,'library');
+ click('[data-view="notes"]');assert.equal($('[data-view="notes"]').getAttribute('aria-pressed'),'true');
+ click('[data-nav="inbox"]');assert.equal($('#heading').textContent,'待阅读');assert.equal($('#library-views').hidden,true);
+ assert.equal(document.querySelectorAll('.sidebar [aria-current="page"]').length,1);assert.equal($('.sidebar [aria-current="page"]').dataset.nav,'inbox');
+ click('[data-nav="library"]');assert.equal($('#library-views').hidden,false);assert.equal($('[data-view="notes"]').getAttribute('aria-pressed'),'true');
+ click('#open-settings');click('#open-trash');assert.equal($('#settings').open,false);assert.equal($('#heading').textContent,'已删除');assert.equal($('#library-views').hidden,true);
+ click('[data-nav="library"]');
  click('#new-note');await until(()=>$('#editor').open);input('title','跨设备的笔记');input('url','https://example.com/a');input('tags','测试');submit();await until(()=>!$('#editor').open);
- let note=(await repo.request()).notes[0];assert.equal(note.title,'跨设备的笔记');assert.match($('#content').textContent,/跨设备/);
+ let note=(await repo.request()).notes[0];assert.equal(note.title,'跨设备的笔记');assert.match($('#content').textContent,/跨设备/);assert.equal($('#library-views').hidden,true);
  click('[data-action="add-record"]');await until(()=>$('#editor').open);input('text','原文中的 `state`');input('thought','```js\nconst n = 1;\n```');
  assert.equal($('#editor .markdown-live'),null);assert.equal($('[name=thought]').value,'```js\nconst n = 1;\n```');submit();await until(()=>!$('#editor').open);
  note=(await repo.request()).notes[0];assert.equal(note.clips.length,1);assert.match(note.clips[0].thought,/const n/);

@@ -184,3 +184,5 @@
 .im-chat .reading-source pre{max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;background:var(--tint);padding:8px}
 .im-chat .reading-source small{font-size:10px;line-height:1.65;display:block;margin-top:8px}
 .im-chat .understand-save-status:empty{display:none}
+
+.settings-key-field{margin:14px 0}.settings-field-label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:7px}.settings-field-label label{margin:0}.settings-field-label a{font-size:12px;color:var(--muted);text-underline-offset:3px;white-space:nowrap}.settings-field-label a:hover{color:var(--ink)}

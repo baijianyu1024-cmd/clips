@@ -9,3 +9,10 @@ test('images are scoped to their captured note; a failed local batch rolls back 
 test('failed upload keeps images and retries only missing uploads, in original order',async()=>{const s=store(),items=await stageImages('note-a',[png(),png()],[],s);let uploads=0,checkpoints=0,fail=true;const upload=async(_blob,item)=>{uploads++;if(uploads===2&&fail)throw Error('offline');return {key:item.id,name:item.name};};await assert.rejects(uploadDraftImages('note-a',items,upload,async()=>{checkpoints++;},s));assert.ok(items[0].image);assert.equal(items[1].image,undefined);assert.equal(s.map.size,2);fail=false;const images=await uploadDraftImages('note-a',items,upload,async()=>{checkpoints++;},s);assert.equal(uploads,3);assert.equal(checkpoints,2);assert.deepEqual(images.map(i=>i.key),items.map(i=>i.id));});
 test('missing local files fail without pretending to save; uploaded legacy attachments still work',async()=>{const s=store();await assert.rejects(uploadDraftImages('a',[{id:'missing'}],async()=>assert.fail(),async()=>{},s),/草稿丢失/);const image={key:'old',name:'old.png'};assert.deepEqual(await uploadDraftImages('a',[{id:'migrated',image}],async()=>assert.fail(),async()=>{},s),[image]);});
 test('lost-response replay checks attachments as well as text before clearing drafts',()=>{const clip={text:'原文',thought:'想法',sourceUrl:'https://example.com',images:[{key:'a'}]};assert.ok(sameDiscovery(clip,clip));assert.equal(sameDiscovery(clip,{...clip,images:[{key:'b'}]}),false);assert.equal(sameDiscovery(clip,{...clip,images:[]}),false);});
+
+test('save confirmation accepts local Markdown whitespace and cloud normalization, but rejects changed content',()=>{
+ const clip={text:' 原文\n',thought:'- 想法\n\n',sourceUrl:'https://example.com',images:[]};
+ assert.ok(sameDiscovery(clip,clip));assert.ok(sameDiscovery({...clip,text:'原文',thought:'- 想法'},clip));
+ assert.equal(sameDiscovery({...clip,thought:'另一想法'},clip),false);
+ assert.equal(sameDiscovery({...clip,sourceUrl:'https://example.org'},clip),false);
+});

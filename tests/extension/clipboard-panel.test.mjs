@@ -32,3 +32,13 @@ test('multiple images can be removed before saving an image-only record; normal 
  await click('[data-action="save"]');await click('[data-context-choice="save"]');assert.equal(note.clips.length,2);assert.equal(note.clips[1].text,'');assert.equal(note.clips[1].thought,'');assert.equal(note.clips[1].images.length,1);
  assert.equal((await paste([],'普通文字')).defaultPrevented,false);
 });
+test('local saves clear the composer and autosave when Markdown contains trailing whitespace',async()=>{
+ adapter.page=async()=>({id:1,url:'https://example.com/article',title:'article'});await handler('page');await flush();
+ adapter.pending=async()=>({text:' 原文内容\n',sourceUrl:'https://example.com/article',sourceTitle:'article'});adapter.clearPending=async()=>{};await click('[data-action="clip"]');assert.match(document.querySelector('#pending-quote').textContent,/原文内容/);
+ thought.value='- 新想法\n\n';thought.dispatchEvent(new window.Event('input',{bubbles:true}));await flush();
+ const before=note.clips.length;await click('[data-action="save"]');
+ assert.equal(note.clips.length,before+1);assert.equal(note.clips.at(-1).thought,'- 新想法\n\n');
+ assert.equal(thought.value,'');assert.equal(storage.get('draft:note-a'),undefined);
+ assert.equal(document.querySelector('#pending-quote').textContent,'');
+ await click('[data-action="save"]');assert.equal(note.clips.length,before+1,'empty composer must not save a duplicate');
+});

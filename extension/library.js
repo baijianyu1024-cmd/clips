@@ -14,6 +14,7 @@ const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 const date = x => x ? new Date(x).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '时间未记录';
 const safeURL = url => { try { const x=new URL(url); return ['https:','http:'].includes(x.protocol) ? x.href : ''; } catch { return ''; } };
 let target=await adapter.target(), notes=[], tags=[], view='records', filter='', query='', detail=new URL(location.href).searchParams.get('note')||'', rendering=0, editing=null, busy=false, persist=Promise.resolve();
+let libraryView='records';
 const imageCache=new Map(), objectURLs=new Set();
 function notice(text='') { $('#notice').hidden=!text; $('#notice').textContent=text; }
 const noteById=id=>notes.find(n=>n.id===id);
@@ -51,12 +52,25 @@ async function reconnect() {
   if(await root.requestPermission({mode:'readwrite'})!=='granted') throw new Error('未获得文件夹读写授权，文件没有被修改。');
   await refresh();
 }
+function renderNavigation() {
+  const section=['records','notes'].includes(view)?'library':view;
+  if(section==='library')libraryView=view;
+  document.querySelectorAll('[data-nav]').forEach(button=>{
+    const current=button.dataset.nav===section;
+    button.classList.toggle('selected',current);
+    if(current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
+  $('#library-views').hidden=section!=='library'||!!detail;
+  document.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===view)));
+}
+function navigate(next) {view=next==='library'?libraryView:next;detail='';render();}
 function render() {
   const live=notes.filter(n=>!n.deletedAt&&!n.archived&&n.status!=='inbox');
   $('#counts').textContent=`${live.length} 篇笔记 · ${live.reduce((a,n)=>a+(n.clips?.length||0)+(n.coreSummary?1:0)+(n.reviews?.length||0),0)} 条记录`;
   $('#tag-list').innerHTML=tags.map(t=>`<button data-action="tag-filter" data-tag="${esc(t.name)}" class="${filter===t.name?'selected':''}"># ${esc(t.name)} <small>${t.count||0}</small></button>`).join('');
   $('#clear-filter').hidden=!filter;
   if(detail&&noteById(detail)) renderDetail(noteById(detail)); else { detail=''; renderList(); }
+  renderNavigation();
   void loadImages();
 }
 function renderList() {
@@ -179,7 +193,10 @@ function exportMarkdown() {
   const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'}));a.href=url;a.download='Clips.md';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('#settings-error').textContent='Markdown 中的图片使用相对路径。将此文件放入资料库文件夹即可与 images/ 一起阅读。';
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b){e.preventDefault();void run(()=>action(b));}const tag=e.target.closest('[data-add-tag]');if(tag){const input=$('#edit-form [name=tags]');input.value=[...new Set([...input.value.split(/[,，]/).map(x=>x.trim()).filter(Boolean),tag.dataset.addTag])].join(', ');void keepEdit();}});
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;detail='';document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('selected',x===b));render();});
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
+document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));
+$('#open-reading-settings').onclick=()=>adapter.open(chrome.runtime.getURL('panel.html?settings=1'));
+$('#open-trash').onclick=()=>{$('#settings').close();navigate('trash');};
 $('#search').oninput=e=>{query=e.target.value.trim().toLowerCase();render();};$('#thoughts-only').onchange=render;
 $('#clear-filter').onclick=()=>{filter='';render();};$('#refresh').onclick=()=>run(refresh);$('#new-note').onclick=()=>run(()=>openEditor('new'));$('#manage-tags').onclick=()=>run(()=>openEditor('tags'));
 $('#choose-folder').onclick=()=>run(chooseFolder);$('#change-folder').onclick=()=>run(chooseFolder,$('#settings-error'));$('#reconnect-folder').onclick=()=>run(reconnect);
@@ -194,7 +211,7 @@ chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes
 await refresh();const requestedNote=new URL(location.href).searchParams.get('note');if(requestedNote&&notes.some(n=>n.id===requestedNote)){detail=requestedNote;render();}if(new URL(location.href).searchParams.has('settings'))showSettings();
 
 const navigation=new URL(location.href).searchParams;
-if(['records','notes','inbox','archive','trash'].includes(navigation.get('view'))){view=navigation.get('view');document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===view));render();}
+if(['records','notes','inbox','archive','trash'].includes(navigation.get('view'))){view=navigation.get('view');render();}
 if(navigation.has('tag')){filter=navigation.get('tag');render();}
 if(navigation.has('new'))void run(()=>openEditor('new'));
 if(navigation.get('manage')==='tags')void run(()=>openEditor('tags'));
