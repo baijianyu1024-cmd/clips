@@ -145,7 +145,7 @@ async function saveEdit() {
   else if(e.type==='legacy') await mutation(n,'edit',{fields:{summary:v.text,thought:v.thought,images}});
   else if(e.type==='review') {if(!v.text.trim())throw new Error('请填写理解。');await mutation(n,e.recordId?'edit_review':'review',{reviewId:e.recordId,text:v.text});}
   else if(e.type==='tags') {const state=await adapter.cloud({path:'/api/tags'});await adapter.cloud({path:'/api/tags',method:'POST',body:{action:v.previous?(v.deleteTag?'delete':'rename'):'create',previous:v.previous,name:v.deleteTag?v.previous:v.name,revision:state.revision}});}
-  await adapter.remove(editScope(e)); await Promise.all(e.attachments.map(i=>draftImageStore.remove(editScope(e),i.id).catch(()=>{})));editing=null;$('#editor').close();await refresh();notice('已保存到文件夹。');
+  await adapter.remove(editScope(e)); await Promise.all(e.attachments.map(i=>draftImageStore.remove(editScope(e),i.id).catch(()=>{})));editing=null;try{await refresh();notice('已保存到文件夹。');}catch{notice('笔记已保存，列表暂未刷新。');}finally{$('#editor').close();}
 }
 async function closeEditor(){await keepEdit();editing=null;$('#editor').close();}
 async function showTranscript(n,id) {
