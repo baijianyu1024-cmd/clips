@@ -40,3 +40,9 @@ Inline Markdown editing
 Tiptap 3.33.0 / ProseMirror and Marked, bundled locally without a CDN.
 Source and usage documentation: https://tiptap.dev/docs/editor/markdown
 Full dependency copyright notices and licenses: vendor/rich-editor-LICENSES.txt
+
+
+Shared notebook interface
+
+React / React DOM, Lucide React, and Zod are bundled locally.
+Full dependency licenses: vendor/library-LICENSES.txt

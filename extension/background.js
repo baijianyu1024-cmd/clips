@@ -229,7 +229,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     Promise.resolve(task).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "引用失败，请重试。" }));
     return true;
   }
-  if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html', 'learning.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
+  if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html', 'learning.html', 'storage.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
   dispatch(message).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "操作失败，请重试。", status: error.status }));
   return true;
 });
@@ -237,7 +237,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onConnect.addListener(port=>{
  if(port.name!=='clips-ai-stream')return;
  const sender=port.sender;
- const native=sender?.id===chrome.runtime.id&&['panel.html','library.html','learning.html'].some(page=>sender.url?.split('?')[0].split('#')[0]===chrome.runtime.getURL(page));
+ const native=sender?.id===chrome.runtime.id&&['panel.html','library.html','learning.html','storage.html'].some(page=>sender.url?.split('?')[0].split('#')[0]===chrome.runtime.getURL(page));
  if(!native){port.disconnect();return;}
  let disconnected=false,started=false;
  port.onDisconnect.addListener(()=>{disconnected=true;});

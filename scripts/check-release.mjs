@@ -23,7 +23,7 @@ const privatePatterns = [
 ];
 const skipped = new Set(['.git', 'node_modules', 'dist', 'coverage']);
 const forbidden = /^(?:\.env(?:\..*)?|\.openai|\.wrangler|clips\.json|backups|transcripts|images)$|\.(?:pem|key|p12|sqlite|db|zip)$/i;
-const allowed = /\.(?:js|mjs|json|md|txt|css|html|png|yml|yaml)$|^(?:LICENSE|\.gitignore)$/;
+const allowed = /\.(?:js|jsx|ts|tsx|mjs|json|md|txt|css|html|png|yml|yaml)$|^(?:LICENSE|\.gitignore|\.gitattributes)$/;
 let checked = 0;
 async function walk(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -41,7 +41,7 @@ async function walk(dir) {
   }
 }
 await walk(root);
-for (const file of ['background.js', 'panel.html', 'library.html', 'vendor/rich-editor.mjs', 'vendor/rich-editor-LICENSES.txt', 'vendor/markdown-it.mjs', 'THIRD_PARTY_NOTICES.txt', ...Object.values(manifest.icons)]) {
+for (const file of ['background.js', 'panel.html', 'library.html', 'library-app.js', 'library-app.css', 'storage.html', 'vendor/rich-editor.mjs', 'vendor/rich-editor-LICENSES.txt', 'vendor/markdown-it.mjs', 'THIRD_PARTY_NOTICES.txt', ...Object.values(manifest.icons)]) {
   assert.ok((await lstat(path.join(root, 'extension', file))).isFile(), `Missing extension file: ${file}`);
 }
 console.log(`Public-source checks passed (${checked} files, version ${manifest.version}).`);

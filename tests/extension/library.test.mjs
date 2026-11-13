@@ -1,40 +1,42 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {parseHTML} from 'linkedom';
+import {JSDOM} from 'jsdom';
 import {diskFolder} from './folder-fixture.mjs';
 import {openFolder,createFolderRepository} from '../../extension/folder-store.js';
 
-test('local library creates, edits, recovers a conflict, and reloads actual folder records',async t=>{
- const disk=await diskFolder(t),target=await openFolder(disk.root),repo=createFolderRepository(disk.root,target.id);
- const {window,document}=parseHTML(await readFile(new URL('../../extension/library.html',import.meta.url),'utf8'));
- Object.assign(globalThis,{window,document,location:new URL('https://example.test/library.html'),confirm:()=>true});
- window.scrollTo=()=>{};
- window.HTMLElement.prototype.showModal=function(){this.open=true;this.setAttribute('open','');};
- window.HTMLElement.prototype.close=function(){this.open=false;this.removeAttribute('open');};
- globalThis.FormData=class {constructor(form){this.pairs=[...form.querySelectorAll('input[name],select[name],textarea[name]')].filter(x=>x.type!=='checkbox'||x.checked).map(x=>[x.name,x.tagName==='SELECT'?(x.querySelector('option[selected]')||x.querySelector('option')).value:x.value]);}*[Symbol.iterator](){yield* this.pairs;}};
- const {adapter}=await import('../../extension/adapter.js');const cache=new Map();
- Object.assign(adapter,{target:async()=>target,cloud:repo.request,read:async k=>structuredClone(cache.get(k)),write:async(k,v)=>cache.set(k,structuredClone(v)),remove:async k=>cache.delete(k)});
- globalThis.chrome={storage:{onChanged:{addListener(){}}}};
- await import('../../extension/library.js');
- const $=s=>document.querySelector(s),until=async pred=>{for(let i=0;i<150;i++){if(pred())return;await new Promise(r=>setTimeout(r,10));}assert.fail('Timed out: '+document.querySelector('#editor-error').textContent);};
- const click=s=>$(s).click(),input=(name,value)=>{$(`[name="${name}"]`).value=value;$(`[name="${name}"]`).dispatchEvent(new window.Event('input',{bubbles:true}));},submit=()=>$('#edit-form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
- assert.deepEqual([...document.querySelectorAll('.sidebar nav span')].map(x=>x.textContent),['笔记库','待阅读','对话']);
- assert.equal($('.sidebar [aria-current="page"]').dataset.nav,'library');
- click('[data-view="notes"]');assert.equal($('[data-view="notes"]').getAttribute('aria-pressed'),'true');
- click('[data-nav="inbox"]');assert.equal($('#heading').textContent,'待阅读');assert.equal($('#library-views').hidden,true);
- assert.equal(document.querySelectorAll('.sidebar [aria-current="page"]').length,1);assert.equal($('.sidebar [aria-current="page"]').dataset.nav,'inbox');
- click('[data-nav="library"]');assert.equal($('#library-views').hidden,false);assert.equal($('[data-view="notes"]').getAttribute('aria-pressed'),'true');
- click('#open-settings');click('#open-trash');assert.equal($('#settings').open,false);assert.equal($('#heading').textContent,'已删除');assert.equal($('#library-views').hidden,true);
- click('[data-nav="library"]');
- click('#new-note');await until(()=>$('#editor').open);input('title','跨设备的笔记');input('url','https://example.com/a');input('tags','测试');submit();await until(()=>!$('#editor').open);
- let note=(await repo.request()).notes[0];assert.equal(note.title,'跨设备的笔记');assert.match($('#content').textContent,/跨设备/);assert.equal($('#library-views').hidden,true);
- click('[data-action="add-record"]');await until(()=>$('#editor').open);input('text','原文中的 `state`');input('thought','```js\nconst n = 1;\n```');
- assert.equal($('#editor .markdown-live'),null);assert.equal($('[name=thought]').value,'```js\nconst n = 1;\n```');submit();await until(()=>!$('#editor').open);
- note=(await repo.request()).notes[0];assert.equal(note.clips.length,1);assert.match(note.clips[0].thought,/const n/);
- click('[data-action="edit-summary"]');await until(()=>$('#editor').open);input('text','**自己的总结**');
- await repo.request({method:'PATCH',body:{id:note.id,revision:note.revision,action:'status',status:'read'}});submit();await until(()=>!$('#editor-conflict').hidden);
- assert.equal($('[name=text]').value,'**自己的总结**');assert.match($('#editor-error').textContent,/草稿已保留/);
- click('#rebase-editor');await until(()=>!$('#editor').open);
- const reopened=createFolderRepository(disk.root,target.id);note=(await reopened.request()).notes[0];assert.equal(note.coreSummary.text,'**自己的总结**');assert.equal(note.status,'read');assert.equal(note.clips.length,1);
+test('shared library UI writes actual files: create, records, summary, drafts, tags and reopening',async t=>{
+ const interval=globalThis.setInterval;globalThis.setInterval=(...args)=>interval(...args).unref();t.after(()=>{globalThis.setInterval=interval;});
+ const disk=await diskFolder(t),target={...await openFolder(disk.root),connection:'session'},repo=createFolderRepository(disk.root,target.id);
+ const dom=new JSDOM(await readFile(new URL('../../extension/library.html',import.meta.url),'utf8'),{url:'https://extension.test/library.html',pretendToBeVisual:true});
+ for(const name of ['window','document','localStorage','sessionStorage','location','history','HTMLElement','HTMLInputElement','HTMLTextAreaElement','HTMLDialogElement','Element','Node','MutationObserver','Event','MouseEvent','getComputedStyle','navigator'])Object.defineProperty(globalThis,name,{configurable:true,value:typeof dom.window[name]==='function'&&name==='getComputedStyle'?dom.window[name].bind(dom.window):dom.window[name]});
+ window.confirm=()=>true;window.scrollTo=()=>{};Element.prototype.scrollIntoView=()=>{};
+ HTMLDialogElement.prototype.showModal=function(){this.open=true;};HTMLDialogElement.prototype.close=function(){this.open=false;};
+ globalThis.requestAnimationFrame=window.requestAnimationFrame.bind(window);globalThis.cancelAnimationFrame=window.cancelAnimationFrame.bind(window);
+ const cache={clipsStorageTarget:target};globalThis.chrome={runtime:{id:'test',getURL:path=>'https://extension.test/'+path,async sendMessage(m){try{return {ok:true,data:await repo.request(m.request)};}catch(e){return {ok:false,error:e.message,status:e.status};}}},tabs:{query:async()=>[]},storage:{local:{get:async keys=>Object.fromEntries((Array.isArray(keys)?keys:[keys]).map(k=>[k,cache[k]])),set:async values=>Object.assign(cache,values),remove:async keys=>(Array.isArray(keys)?keys:[keys]).forEach(k=>delete cache[k])},onChanged:{addListener(){}}}};
+ await import('../../extension/library-app.js?integration');
+ const $=s=>document.querySelector(s),all=s=>[...document.querySelectorAll(s)],until=async pred=>{for(let i=0;i<250;i++){if(pred())return;await new Promise(r=>setTimeout(r,10));}assert.fail('Timed out: '+document.body.textContent.slice(-1800));};
+ const clickText=(text,scope=document)=>{const b=[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text);assert.ok(b,'Button '+text);b.click();};
+ const input=(selector,value)=>{const el=$(selector);assert.ok(el,selector);const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));};
+ const submit=selector=>$(selector).dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ const pause=()=>new Promise(r=>setTimeout(r,40));
+ await until(()=>!!$('.new-note'));
+ $('.new-note').click();await until(()=>$('dialog.editor-modal'));
+ input('.title-input','共享界面验证');await pause();submit('dialog.editor-modal form');await until(()=>!$('dialog.editor-modal'));
+ let note=(await repo.request()).notes[0];assert.equal(note.title,'共享界面验证');
+ // Detail entry uses the same records UI as the hosted notebook.
+ await until(()=>document.body.textContent.includes('共享界面验证'));
+ await until(()=>$('.note-detail'));
+ clickText('记一笔');await until(()=>$('[aria-label="我的想法内容"]'));
+ input('[aria-label="我的想法内容"]','**本地与云端共用界面**');await pause();submit('form.reading-inline-editor');await until(()=>!$('form.reading-inline-editor'));
+ note=(await repo.request()).notes[0];assert.equal(note.clips.length,1);assert.equal(note.clips[0].thought,'**本地与云端共用界面**');assert.ok($('.reading-log strong'));
+ // A new record starts empty and its draft survives a component round trip.
+ clickText('记一笔');await until(()=>$('[aria-label="我的想法内容"]'));assert.equal($('[aria-label="我的想法内容"]').value,'');input('[aria-label="我的想法内容"]','下一条未保存');await pause();assert.ok(Object.values(localStorage).some(v=>v.includes('下一条未保存')));clickText('放弃修改');await pause();
+ // The summary is edited inline and keeps the most recent record revision.
+ clickText('自己写');await until(()=>$('section.core-summary textarea'));input('section.core-summary textarea','- 简洁的核心摘要');await pause();clickText('保存摘要');await until(()=>!$('section.core-summary textarea'));assert.equal((await repo.request()).notes[0].coreSummary.text,'- 简洁的核心摘要');
+ $('[aria-label="管理标签"]').click();await until(()=>$('[aria-label="新标签名称"]'));input('[aria-label="新标签名称"]','测试标签');await pause();submit('.tag-manager-create');await until(()=>!!$('[aria-label="重命名标签 测试标签"]'));
+ $('[aria-label="重命名标签 测试标签"]').click();await pause();input('input[aria-label="重命名标签 测试标签"]','已改名');await pause();submit('.tag-rename-form');await until(()=>!!$('[aria-label="筛选标签 已改名"]'));$('[aria-label="关闭标签管理"]').click();await pause();
+ const reopened=createFolderRepository(disk.root,target.id);assert.equal((await reopened.request()).notes[0].clips.length,1);assert.ok((await reopened.request({path:'/api/tags'})).tags.some(t=>t.name==='已改名'));
+ // Unmount to remove polling timers before closing the DOM.
+ dom.window.close();
 });

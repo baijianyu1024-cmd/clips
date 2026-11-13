@@ -59,22 +59,27 @@ function blankNote(id, fields) {
     ...fields, id, createdAt:now(), updatedAt:now(), revision:1, starred:false, archived:false, deletedAt:null, reviews:[], coreSummary:null, coreSummaryHistory:[], transcripts:[], nextReviewAt:null };
 }
 function allTags(data) { return [...new Set([...data.tags, ...data.notes.flatMap(n => n.tags || [])])].sort((a,b) => a.localeCompare(b)); }
-function tagsState(data) { return { revision:data.tagRevision || 0, tags:allTags(data).map(name => ({ name, count:data.notes.filter(n => !n.deletedAt && n.tags.includes(name)).length })) }; }
+function tagsState(data) { return { revision:data.tagRevision || 0, tags:allTags(data).map(name => ({ name, count:data.notes.filter(n => !n.deletedAt && !n.archived && n.status!=='inbox' && n.tags.some(t=>normalize(t)===normalize(name))).length,usageCount:data.notes.filter(n=>n.tags.some(t=>normalize(t)===normalize(name))).length })) }; }
 export function mutateLocalNote(current, body) {
   if (current.revision !== body.revision) conflict();
   const n = structuredClone(current), action = body.action;
+  if (['edit_metadata','edit_record','remove_image','edit_image_record','edit_review','edit_ai_summary','tag','start_reading','add_clip','add_ai_summary','position','status','add_image'].includes(action)&&(n.deletedAt||n.archived)) throw new Error('请先恢复笔记，再修改。');
+  if(n.status==='inbox'&&['add_clip','add_ai_summary','position','add_image'].includes(action))n.status='reading';
   if (action === 'add_clip') { if (!uuid(body.clip?.id)) throw new Error('记录无效。'); if (!n.clips.some(c => c.id === body.clip.id)) { n.clips.push(body.clip); if (body.clip.sourceUrl && !n.sources.some(s=>s.url===body.clip.sourceUrl)) n.sources.push({url:body.clip.sourceUrl,label:body.clip.sourceTitle||''}); } }
   else if (action === 'edit_record') { if(body.record?.id==='legacy'){n.summary=body.record.text;n.thought=body.record.thought;if(body.record.images)n.legacyRecordImages=body.record.images;}else{const record = n.clips.find(c=>c.id===body.record?.id); if (!record) throw new Error('记录不存在。'); if(record.text!==body.record.text) { delete record.anchor; delete record.transcriptAnchor; delete record.translation; } Object.assign(record,{text:body.record.text||'',thought:body.record.thought||'',...(body.record.images ? {images:body.record.images} : {})});} }
   else if(action==='edit_image_record'){const image=n.images.find(i=>i.key===body.imageKey);if(!image){if(n.clips.some(c=>c.id===body.record.id))return current;throw new Error('截图记录不存在。');}n.images=n.images.filter(i=>i.key!==image.key);n.clips.push({...body.record,sourceUrl:n.sources[0]?.url||'',sourceTitle:n.sources[0]?.label||'',createdAt:image.createdAt||n.createdAt,videoTime:null});}
   else if(action==='edit_ai_summary'){const a=n.aiSummaries.find(a=>a.id===body.aiSummaryId);if(!a)throw new Error('摘要不存在。');a.text=body.text;}
+  else if (action === 'add_image') { if(!n.images.some(i=>i.key===body.image.key))n.images.push({...body.image,createdAt:body.image.createdAt||now()}); }
+  else if (action === 'remove_image') n.images=n.images.filter(i=>i.key!==body.imageKey);
   else if (action === 'remove_record') n.clips = n.clips.filter(c=>c.id!==body.recordId);
   else if (action === 'set_clip_translation') { const clip = n.clips.find(c=>c.id===body.clip?.id); if (!clip) throw new Error('记录不存在。'); if(clip.text!==body.clip.text||clip.sourceUrl!==body.clip.sourceUrl||JSON.stringify(clip.transcriptAnchor)!==JSON.stringify(body.clip.transcriptAnchor)) conflict(); clip.translation = body.clip.translation; }
   else if (action === 'set_core_summary') { if(n.coreSummary?.id===body.coreSummary.id)return current;if ((n.coreSummary?.id||null)!==(body.expectedCoreSummaryId??null)) conflict(); if (n.coreSummary) n.coreSummaryHistory=[...(n.coreSummaryHistory||[]),n.coreSummary].slice(-20); n.coreSummary=body.coreSummary; }
   else if (action === 'add_ai_summary') { if (!n.aiSummaries.some(a=>a.id===body.aiSummary.id)) n.aiSummaries.push(body.aiSummary); }
-  else if (action === 'edit_metadata') { const m=body.metadata; for(const key of ['title','kind','status','sources','tags','published','timestamp']) if(key in m) n[key]=m[key]; }
+  else if (action === 'edit_metadata') { const m=body.metadata; for(const key of ['title','kind','status','sources','tags','published','timestamp']) if(key in m) n[key]=m[key]; if(m.title!==current.title&&m.title)n.linkTitleStatus='ready'; }
   else if (action === 'edit') { for(const key of ['title','summary','thought','kind','status','sources','tags','published','timestamp','images']) if(key in body.fields) n[key]=body.fields[key]; }
   else if (action === 'start_reading') { if(n.status==='inbox') { n.status='reading'; if(body.title) n.title=body.title; } }
   else if (action === 'status') { if(!['reading','read','inbox'].includes(body.status)) throw new Error('阅读状态无效。'); n.status=body.status; }
+  else if (action === 'read') n.status=n.status==='read'?'inbox':'read';
   else if (action === 'star') n.starred=!n.starred;
   else if (action === 'archive') n.archived=!n.archived;
   else if (action === 'trash') n.deletedAt=now();
@@ -191,19 +196,25 @@ export function createFolderRepository(root, id, lock = task => task()) {
       if(path==='/api/tags'||body.action==='create_tag') {
         if(method==='GET') return tagsState(data);
         if(body.revision!==data.tagRevision) conflict();
-        const name=validateTag(body.name), names=allTags(data), existing=names.find(t=>normalize(t)===normalize(name));
-        if(body.action==='rename'||body.action==='delete') {
-          const from=body.previous; if(!names.includes(from)) throw new Error('标签不存在。');
-          data.tags=names.filter(t=>t!==from); if(body.action==='rename'&&!existing) data.tags.push(name);
-          for(const n of data.notes) if(n.tags.includes(from)) { n.tags=[...new Set(n.tags.flatMap(t=>t===from?(body.action==='rename'?[existing||name]:[]):[t]))]; n.revision++; }
-        } else if(!existing) data.tags=[...names,name];
-        data.tagRevision++; await commit(data,old); return {...tagsState(data),created:existing||name};
+        const name=validateTag(body.name),names=allTags(data),previous=body.from??body.previous;
+        const from=names.find(t=>normalize(t)===normalize(previous||'')),existing=names.find(t=>normalize(t)===normalize(name));
+        if(['rename','delete'].includes(body.action)&&!from) throw new Error('标签不存在。');
+        if(body.action==='rename'&&existing&&normalize(existing)!==normalize(from))throw Object.assign(new Error('已有同名标签，请换一个名称。'),{status:409});
+        const changed=[];
+        if(from){
+          data.tags=names.filter(t=>normalize(t)!==normalize(from));if(body.action==='rename')data.tags.push(name);
+          for(const n of data.notes)if(n.tags.some(t=>normalize(t)===normalize(from))){n.tags=[...new Set(n.tags.flatMap(t=>normalize(t)===normalize(from)?(body.action==='rename'?[name]:[]):[t]))];n.revision++;changed.push(n);}
+        }else if(!existing)data.tags=[...names,name];
+        if(data.tags.length>500)throw new Error('最多创建 500 个标签。');
+        data.tagRevision++;await commit(data,old);
+        return {...tagsState(data),notes:changed,...(from?{renamed:{from,to:name}}:{created:existing||name})};
       }
       if(path!=='/api/notes') throw new Error('不支持的资料库请求。');
       if(method==='GET') return {notes:data.notes,tagState:tagsState(data)};
       if(method==='POST') {
         if(body.action==='resolve_title') {
           const n=data.notes.find(n=>n.id===body.id); if(!n) throw new Error('笔记不存在。');
+          if(n.status!=='inbox'||n.linkTitleStatus==='ready')return {note:n};
           if(body.browser&&titleUrlKey(body.browser.url)===titleUrlKey(n.sources[0]?.url)) { const title=cleanPageTitle(body.browser.title,body.browser.url); if(title) { n.title=title; n.linkTitleStatus='ready'; n.revision++; await commit(data,old); } }
           return {note:n};
         }
@@ -213,7 +224,16 @@ export function createFolderRepository(root, id, lock = task => task()) {
           if(found) return {note:found,existing:true};
           const note=blankNote(body.id,{...createFields({url,title:new URL(url).hostname}),status:'inbox',linkTitleStatus:'unavailable'}); data.notes.unshift(note); await commit(data,old); return {note};
         }
-        if(body.action) throw new Error('请通过选择完整的资料库文件夹来恢复笔记和图片。');
+        if(body.action==='import') {
+          if(body.backup?.version!==1||!Array.isArray(body.backup.notes)||body.backup.notes.length>1000)throw new Error('备份格式无效，最多导入 1,000 条笔记。');
+          const incoming=[...new Map(body.backup.notes.map(n=>[n.id,n])).values()];let added=0;
+          for(const n of incoming){if(data.notes.some(saved=>saved.id===n.id))continue;
+            for(const meta of n.transcripts||[]){if(!/^[a-f0-9]{64}$/.test(meta.id))throw new Error('字幕索引无效。');await fileAt(root,'transcripts/'+meta.id+'.json');}
+            data.notes.push({...blankNote(n.id,{}),...n,revision:1});added++;
+          }
+          await commit(data,old);return {added,skipped:incoming.length-added};
+        }
+        if(body.action) throw new Error('不支持这个笔记操作。');
         const found=data.notes.find(n=>n.id===body.id); if(found) return {note:found};
         const note=blankNote(body.id,body.fields);
         if(note.status!=='inbox') data.notes=data.notes.filter(n=>n.status!=='inbox'||!n.sources.some(s=>note.sources.some(t=>titleUrlKey(t.url)===titleUrlKey(s.url))));

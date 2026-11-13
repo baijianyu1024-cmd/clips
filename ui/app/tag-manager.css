@@ -1,0 +1,35 @@
+.tag-manager{width:520px;max-width:calc(100vw - 32px)}
+.tag-manager .modal-header h2{display:flex;align-items:center;gap:10px;font-size:15px}
+.tag-manager .modal-header h2>span{font-size:12px;font-weight:400;color:var(--muted)}
+.tag-manager-body{padding:18px 22px}
+.tag-manager-search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--muted)}
+.tag-manager-search input{border:0;padding:0;width:100%;min-width:0;font-size:13px;background:transparent;box-shadow:none}
+.tag-manager-search>svg{flex-shrink:0}
+.tag-manager-search:focus-within{border-color:var(--control-focus);box-shadow:0 0 0 2px var(--control-ring)}
+.tag-manager-search input:focus-visible{outline:none;box-shadow:none}
+.tag-manager-all{display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;padding:12px 9px;margin-top:8px;font-size:13px;border-bottom:1px solid var(--line)}
+.tag-manager-all[aria-pressed=true]{font-weight:600}
+.tag-manager-list{max-height:340px;max-height:min(340px,45vh);overflow:auto;overscroll-behavior:contain;margin-top:6px}
+.tag-manager-row{display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid var(--line);padding:4px 2px}
+.tag-manager-row:last-child{border-bottom:0}
+.tag-manager-name{display:flex;align-items:center;gap:7px;flex:1;min-width:0;padding:8px 7px;text-align:left;font-size:13px;border-radius:4px}
+.tag-manager-name b{font-weight:400;overflow-wrap:anywhere;min-width:0}.tag-manager-name>span{color:var(--muted)}
+button.tag-manager-name:hover,.tag-manager-all:hover{background:var(--paper)}
+.tag-manager-name[aria-pressed=true] b{font-weight:600}
+.tag-manager-count{flex-shrink:0;font-size:11px;color:var(--muted)}
+.tag-manager-row>.icon-button{flex-shrink:0}
+.tag-rename-form{display:flex;align-items:center;flex-wrap:wrap;gap:6px;width:100%;padding:7px 5px}
+.tag-rename-form input{flex:1;min-width:70px;width:0;border:1px solid var(--line);border-radius:5px;padding:6px 8px;font-size:13px}
+.tag-rename-form small{flex-basis:100%;font-size:11px;color:var(--muted)}
+.tag-manager-empty{padding:24px 8px;color:var(--muted);font-size:13px}
+.tag-manager-create{display:flex;gap:8px;border-top:1px solid var(--line);padding:16px 22px;position:sticky;bottom:0;background:#fff}
+.tag-manager-create>input{width:0;flex:1;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;min-width:0}
+.tag-manager-create .primary{font-size:12px;flex-shrink:0}
+.sidebar-label .manage-tags-link{font-size:11px;letter-spacing:0;padding:0;text-decoration:underline;text-underline-offset:3px}
+.library-tags-button{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px;padding:6px;white-space:nowrap}
+.library-tags-button[aria-pressed=true]{color:var(--ink);font-weight:600}
+.library-overview .library-scope{color:var(--muted);font-size:11px}
+.library-filter-result{flex-wrap:wrap}
+.library-filter-result .library-tag-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:3px 7px;background:var(--paper);border:1px solid var(--line);border-radius:4px;text-decoration:none;overflow-wrap:anywhere}
+.library-filter-result .library-tag-chip span{min-width:0}
+@media(max-width:500px){.tag-manager-body{padding:14px}.tag-manager-create{padding:14px}.tag-manager-count{font-size:10px}.tag-manager-row{gap:5px}}

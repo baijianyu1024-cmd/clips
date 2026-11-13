@@ -7,3 +7,5 @@
 .library-toolbar .filters{flex:1;justify-content:flex-end;flex-wrap:wrap;gap:12px;border:0;padding:6px 0;margin:0;min-width:0}.library-toolbar .filters input[type=search]{flex:1;min-width:150px;max-width:300px}.library-toolbar:has(.filters[hidden]){display:none}
 @media(max-width:800px){.library-toolbar{gap:6px}.library-toolbar .filters{flex-basis:100%;padding-bottom:12px}.library-toolbar .filters input[type=search]{max-width:none}}
 @media(max-width:520px){.sidebar-bottom{flex-wrap:wrap}.sidebar-bottom .nav-item{font-size:12px;padding:6px}.sidebar .nav-item{gap:6px}}
+
+.storage-page{display:block}.storage-page .sidebar,.storage-page .toolbar{display:none}.storage-page main{max-width:900px;margin:auto}

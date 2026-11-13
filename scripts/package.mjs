@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { zipSync, unzipSync } from 'fflate';
 import assert from 'node:assert/strict';
+import './check-parity.mjs';
 import './check-release.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -12,7 +13,7 @@ const files = {};
 async function collect(dir, relative = '') {
   for (const entry of (await readdir(dir, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
     assert.ok(!entry.isSymbolicLink(), 'Symlinks cannot be packaged');
-    if (entry.name.startsWith('preview.')) continue;
+    if (entry.name.startsWith('preview.') || entry.name.endsWith('.jsx') || ['library.js','learning-local.js'].includes(entry.name)) continue;
     const key = relative + entry.name;
     if (entry.isDirectory()) await collect(path.join(dir, entry.name), key + '/');
     else files[key] = new Uint8Array(await readFile(path.join(dir, entry.name)));
