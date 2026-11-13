@@ -1,16 +1,19 @@
 import {renderMarkdown} from './markdown.js';
 import {kindNames} from './learning-retrieval.js';
 import {attachMarkdownEditor} from './markdown-editor.js';
+import {createDraftStore,browserDraftStorage} from './draft-store.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function mountLearning(root,api){
  let chat=null,chats=[],notes=[],scope=[],busy=false,draft=null,requestId=null,destroyed=false,editor=null,materialTurn=null,materialTab='used',pending=null;
+ const drafts=createDraftStore(api.draftStorage||browserDraftStorage(root.ownerDocument.defaultView));
+ let previewKey='',restoreId=0,previewRevision=0,questionRevision=0;
  const $=q=>root.querySelector(q),noteURL=id=>api.noteURL(id),number=id=>(chat?.materials.findIndex(m=>m.id===id)??-1)+1;
- root.innerHTML=`<div class="learn-shell"><main class="learn-main"><header class="learn-header"><h1 id="learn-title">新对话</h1><div class="learn-header-actions"><button data-action="scope" id="learn-scope">全部笔记 ▾</button><button data-action="history" aria-label="对话历史" aria-expanded="false">历史</button></div></header><div id="learn-notice" role="status" hidden></div><div id="learn-turns" class="learn-turns" aria-live="polite"></div><form id="learn-form" class="learn-composer"><label class="learn-sr" for="learn-question">问题</label><textarea id="learn-question" rows="2" maxlength="4000" placeholder="问问你的笔记…"></textarea><div><span class="learn-muted" id="learn-progress">依据已保存的笔记、原文片段与字幕回答</span><button class="learn-primary" type="submit" id="learn-send">发送 ↑</button></div></form></main><aside class="learn-history-panel" aria-label="对话历史"><header><h2>对话历史</h2><button data-action="history-close" aria-label="关闭历史">×</button></header><button class="learn-primary" data-action="new">＋ 新对话</button><div id="learn-history"></div><button class="learn-settings" data-action="settings">阅读设置</button></aside></div><dialog id="learn-image-dialog" class="learn-dialog learn-image-dialog"><header><h2>参考图片</h2><button data-close="learn-image-dialog" aria-label="关闭图片">×</button></header><img alt="参考材料图片"></dialog>
+ root.innerHTML=`<div class="learn-shell"><main class="learn-main"><header class="learn-header"><h1 id="learn-title">新对话</h1><div class="learn-header-actions"><button data-action="resume-preview" hidden>笔记预览</button><button data-action="scope" id="learn-scope">全部笔记 ▾</button><button data-action="history" aria-label="对话历史" aria-expanded="false">历史</button></div></header><div id="learn-notice" role="status" hidden></div><div id="learn-turns" class="learn-turns" aria-live="polite"></div><form id="learn-form" class="learn-composer"><label class="learn-sr" for="learn-question">问题</label><textarea id="learn-question" rows="2" maxlength="4000" placeholder="输入问题"></textarea><div><span class="learn-muted" id="learn-progress"></span><button class="learn-primary" type="submit" id="learn-send">发送 ↑</button></div></form></main><aside class="learn-history-panel" aria-label="对话历史"><header><h2>对话历史</h2><button data-action="history-close" aria-label="关闭历史">×</button></header><button class="learn-primary" data-action="new">＋ 新对话</button><div id="learn-history"></div><button class="learn-settings" data-action="settings">阅读设置</button></aside></div><dialog id="learn-image-dialog" class="learn-dialog learn-image-dialog"><header><h2>参考图片</h2><button data-close="learn-image-dialog" aria-label="关闭图片">×</button></header><img alt="参考材料图片"></dialog>
  <dialog class="learn-dialog" id="learn-materials" aria-labelledby="learn-material-title"><header><h2 id="learn-material-title">参考材料</h2><button data-close="learn-materials" aria-label="关闭材料">×</button></header><div class="learn-material-tabs" role="tablist"><button role="tab" data-material-tab="used">本轮参考</button><button role="tab" data-material-tab="all">全部检索</button></div><p class="learn-muted" id="learn-material-caption"></p><div id="learn-material-content"></div></dialog>
  <dialog class="learn-dialog" id="learn-scope-dialog" aria-labelledby="learn-scope-title"><header><h2 id="learn-scope-title">笔记范围</h2><button data-close="learn-scope-dialog" aria-label="关闭范围">×</button></header><p class="learn-muted">不勾选时检索全部未归档笔记。范围调整只影响后续回答。</p><input id="learn-note-search" type="search" placeholder="搜索笔记标题" aria-label="搜索笔记标题"><div id="learn-note-options"></div><footer><button data-action="all-notes">全部笔记</button><button class="learn-primary" data-action="scope-done">完成</button></footer></dialog>
- <dialog class="learn-dialog" id="learn-save-dialog" aria-labelledby="learn-save-title"><header><h2 id="learn-save-title">整理成笔记</h2><button data-close="learn-save-dialog" aria-label="关闭草稿">×</button></header><div id="learn-save-choice"><p>提炼问题与回答，保留来源，保存为独立笔记。</p><button data-action="draft-round">只整理这一轮</button><button data-action="draft-chat">整理整段对话</button></div><form id="learn-save-form" hidden><label>标题<input id="learn-draft-title" maxlength="200" required></label><label for="learn-draft-body">正文</label><textarea id="learn-draft-body" maxlength="40000" rows="10" required></textarea><p class="learn-muted">同时保留问题、参考材料快照和原对话链接。</p><footer><span id="learn-save-status" role="status"></span><button class="learn-primary" type="submit">保存笔记</button></footer></form><p id="learn-draft-status" role="status"></p></dialog>`;
+ <dialog class="learn-dialog" id="learn-save-dialog" aria-labelledby="learn-save-title"><header><h2 id="learn-save-title">笔记预览</h2><button data-close="learn-save-dialog" aria-label="关闭预览">×</button></header><div id="learn-save-choice"><button data-action="draft-round">只整理这一轮</button><button data-action="draft-chat">整理整段对话</button></div><form id="learn-save-form" hidden><label>标题<input id="learn-draft-title" maxlength="200" required></label><label for="learn-draft-body">正文</label><textarea id="learn-draft-body" maxlength="40000" rows="10" required></textarea><footer><span id="learn-save-status" role="status"></span><button type="button" data-action="redraft">重新整理</button><button class="learn-primary" type="submit">保存笔记</button></footer></form><p id="learn-draft-status" role="status"></p></dialog>`;
  const notice=(text,error=false)=>{if(destroyed)return;$('#learn-notice').hidden=!text;$('#learn-notice').textContent=text;$('#learn-notice').classList.toggle('learn-error',error);};
- function setBusy(value,label='正在检索并整理回答…'){busy=value;$('#learn-question').disabled=value;$('#learn-send').disabled=value;root.querySelectorAll('[data-action="new"],[data-chat],[data-action="save"],[data-action="scope"]').forEach(b=>b.disabled=value);$('#learn-progress').textContent=value?label:'依据已保存的笔记、原文片段与字幕回答';}
+ function setBusy(value,label='正在检索并整理回答…'){busy=value;$('#learn-question').disabled=value;$('#learn-send').disabled=value;root.querySelectorAll('[data-action="new"],[data-chat],[data-action="save"],[data-action="scope"]').forEach(b=>b.disabled=value);$('#learn-progress').textContent=value?label:'';}
  function history(){ $('#learn-history').innerHTML=chats.map(c=>`<button data-chat="${c.id}" class="${c.id===chat?.id?'active':''}" title="${esc(c.title)}">${esc(c.title)}</button>`).join('')||'<p class="learn-muted">暂无对话</p>'; }
  const imageCache=new Map();
  const imageURL=key=>{if(!imageCache.has(key))imageCache.set(key,Promise.resolve().then(()=>api.image(key)).catch(e=>{imageCache.delete(key);throw e;}));return imageCache.get(key);};
@@ -24,12 +27,12 @@ export function mountLearning(root,api){
  function render(forceScroll=false){
    const log=$('#learn-turns'),nearBottom=log.scrollHeight-log.scrollTop-log.clientHeight<80,scroll=log.scrollTop;
    $('#learn-title').textContent=chat?.title||'新对话';history();
-   log.innerHTML=chat?.turns.length||pending?(chat?.turns||[]).map((t,index)=>`<section class="learn-turn" id="turn-${t.id}"><div class="learn-question">${esc(t.question)}</div><div class="learn-answer"><div class="learn-answer-head"><b>Clips</b><button data-action="materials" data-turn="${t.id}">查看材料 · ${t.used.length} 段 ↗</button></div>${paragraphsHTML(t.answer,t.id,chat.materials)}${t.warnings?.length?`<p class="learn-muted learn-warning">${esc(t.warnings.join(' '))}</p>`:''}<footer><button data-action="save" data-turn="${t.id}">整理成笔记</button><span class="learn-muted">${index+1} / 20 轮</span></footer></div></section>`).join('')+(pending?`<section class="learn-turn" id="turn-${pending.id}"><div class="learn-question">${esc(pending.question)}</div><div class="learn-answer" aria-busy="true"><div class="learn-answer-head"><b>Clips</b></div>${paragraphsHTML(pending.answer||[],pending.id,pending.materials||[])}<p class="learn-muted learn-pending" role="status">${esc(pending.status||'正在检索笔记…')}</p></div></section>`:''):`<div class="learn-empty"><h2>从一个问题开始</h2><div>${['对比笔记中的 Agent 架构与适用场景','梳理我对 Agent 的观点变化','基于我的笔记，生成一份分享提纲'].map(q=>`<button data-suggestion="${esc(q)}">${q} ↗</button>`).join('')}</div></div>`;
+   log.innerHTML=chat?.turns.length||pending?(chat?.turns||[]).map((t,index)=>`<section class="learn-turn" id="turn-${t.id}"><div class="learn-question">${esc(t.question)}</div><div class="learn-answer"><div class="learn-answer-head"><b>Clips</b><button data-action="materials" data-turn="${t.id}">查看材料 · ${t.used.length} 段 ↗</button></div>${paragraphsHTML(t.answer,t.id,chat.materials)}${t.warnings?.length?`<p class="learn-muted learn-warning">${esc(t.warnings.join(' '))}</p>`:''}<footer><button data-action="save" data-turn="${t.id}">整理成笔记</button><span class="learn-muted">${index+1} / 20 轮</span></footer></div></section>`).join('')+(pending?`<section class="learn-turn" id="turn-${pending.id}"><div class="learn-question">${esc(pending.question)}</div><div class="learn-answer" aria-busy="true"><div class="learn-answer-head"><b>Clips</b></div>${paragraphsHTML(pending.answer||[],pending.id,pending.materials||[])}<p class="learn-muted learn-pending" role="status">${esc(pending.status||'正在检索笔记…')}</p></div></section>`:''):`<div class="learn-empty"><div>${['对比笔记中的 Agent 架构与适用场景','梳理我对 Agent 的观点变化','基于我的笔记，生成一份分享提纲'].map(q=>`<button data-suggestion="${esc(q)}">${q} ↗</button>`).join('')}</div></div>`;
    log.scrollTop=forceScroll||nearBottom?log.scrollHeight:scroll;loadAnswerImages();
    if(busy)root.querySelectorAll('[data-chat],[data-action="save"]').forEach(b=>b.disabled=true);
  }
  async function refreshList(){chats=(await api.request({path:'/api/learning'})).chats;history();}
- async function openChat(id){if(busy)return;notice('');const data=await api.request({path:'/api/learning?id='+id});if(!data.chat)throw new Error('对话不存在。');chat=data.chat;scope=chat.turns.at(-1)?.scope||[];$('#learn-scope').textContent=scope.length?`已选 ${scope.length} 篇 ▾`:'全部笔记 ▾';requestId=null;$('#learn-question').value='';render();$('.learn-shell').classList.remove('history-open');$('[data-action="history"]').setAttribute('aria-expanded','false');api.setChat?.(id);}
+ async function openChat(id){if(busy)return;notice('');const data=await api.request({path:'/api/learning?id='+id});if(!data.chat)throw new Error('对话不存在。');chat=data.chat;scope=chat.turns.at(-1)?.scope||[];$('#learn-scope').textContent=scope.length?`已选 ${scope.length} 篇 ▾`:'全部笔记 ▾';requestId=null;$('#learn-question').value='';render();$('.learn-shell').classList.remove('history-open');$('[data-action="history"]').setAttribute('aria-expanded','false');api.setChat?.(id);await restoreTemporary();}
  async function materials(turnId,focus){
    materialTurn=chat.turns.find(t=>t.id===turnId);if(!materialTurn)return;
    if(focus)materialTab='used';
@@ -44,18 +47,62 @@ export function mountLearning(root,api){
    for(const image of modal.querySelectorAll('[data-material-image]'))imageURL(image.dataset.materialImage).then(src=>{if(image.isConnected)image.src=src;}).catch(()=>{image.alt='图片文件暂时无法读取';});
  }
  function renderScopes(){const q=$('#learn-note-search').value.toLowerCase();$('#learn-note-options').innerHTML=notes.filter(n=>n.title.toLowerCase().includes(q)).map(n=>`<label><input type="checkbox" value="${n.id}" ${scope.includes(n.id)?'checked':''}>${esc(n.title)}</label>`).join('');}
- function openSave(id){materialTurn=chat.turns.find(t=>t.id===id);$('#learn-save-choice').hidden=false;$('#learn-save-form').hidden=true;$('#learn-draft-status').textContent='';$('#learn-save-dialog').showModal();}
- async function makeDraft(all){setBusy(true,'正在整理笔记草稿…');$('#learn-draft-status').textContent='正在提炼问题与回答…';$('#learn-save-choice').hidden=true;
-   try{const result=await api.run('draft',{chatId:chat.id,turnId:all?undefined:materialTurn.id});draft=result.draft;$('#learn-save-form button[type="submit"]').disabled=false;$('#learn-draft-title').value=draft.title;$('#learn-draft-body').value=draft.text;$('#learn-save-form').hidden=false;$('#learn-draft-status').textContent='';$('#learn-save-status').textContent='';editor||=await attachMarkdownEditor($('#learn-draft-body'));}
-   catch(e){$('#learn-draft-status').textContent=e.message;$('#learn-save-choice').hidden=false;}finally{setBusy(false);}
+ const questionKey=()=>`learning-question:${chat?.id||'new'}`;
+ function previewButton(){ $('[data-action="resume-preview"]').hidden=!draft; }
+ async function restoreTemporary(){
+   const seq=++restoreId,chatId=chat?.id,qKey=questionKey(),initial=$('#learn-question').value,inputRevision=questionRevision;
+   if(!busy)$('#learn-progress').textContent='';
+   draft=null;previewKey=chatId?`learning-preview:${chatId}`:'';previewButton();
+   try{
+     const [saved,question]=await Promise.all([previewKey?drafts.load(previewKey):null,drafts.load(qKey)]);
+     if(destroyed||seq!==restoreId)return;
+     if(saved&&saved.chatId===chatId&&typeof saved.title==='string'&&typeof saved.text==='string'&&Array.isArray(saved.turnIds)&&saved.id){draft=saved;previewButton();}
+     if(typeof question==='string'&&!initial&&$('#learn-question').value===initial&&inputRevision===questionRevision&&!busy){$('#learn-question').value=question;$('#learn-progress').textContent=question?'已自动暂存':'';}
+   }catch{if(!destroyed&&seq===restoreId)notice('暂存内容读取失败，请稍后重试。',true);}
  }
- async function submit(event){event.preventDefault();if(busy)return;const question=$('#learn-question').value.trim();if(!question)return;requestId||=crypto.randomUUID();chat||={id:crypto.randomUUID(),revision:0,title:question.slice(0,80),materials:[],turns:[]};
-   const id=requestId;pending={id,question};$('#learn-question').value='';setBusy(true);notice('');render(true);
+ async function keepQuestion(){
+   const key=questionKey(),text=$('#learn-question').value;
+   try{await (text?drafts.save(key,text):drafts.clear(key));if(!destroyed&&!busy&&key===questionKey()&&text===$('#learn-question').value)$('#learn-progress').textContent=text?'已自动暂存':'';}
+   catch{if(!destroyed&&!busy&&key===questionKey())$('#learn-progress').textContent='暂存失败，请先复制输入';}
+ }
+ async function keepPreview(){
+   if(!draft)return;
+   const current=draft,key=previewKey,seq=++previewRevision;
+   current.title=$('#learn-draft-title').value;current.text=$('#learn-draft-body').value;
+   $('#learn-save-status').textContent='正在暂存…';
+   try{await drafts.save(key,current);if(!destroyed&&draft===current&&seq===previewRevision)$('#learn-save-status').textContent='已自动暂存';}
+   catch{if(!destroyed&&draft===current&&seq===previewRevision)$('#learn-save-status').textContent='暂存失败，请先保存笔记';}
+ }
+ async function showPreview(){
+   $('#learn-save-choice').hidden=true;$('#learn-save-form').hidden=false;
+   $('#learn-draft-title').readOnly=$('#learn-draft-body').readOnly=false;
+   $('#learn-draft-title').value=draft.title;$('#learn-draft-body').value=draft.text;
+   $('#learn-save-form button[type="submit"]').disabled=false;$('#learn-draft-status').textContent='';
+   try{editor||=await attachMarkdownEditor($('#learn-draft-body'));}catch{/* Keep the editable Markdown textarea available. */}previewButton();
+ }
+ async function openSave(id){
+   materialTurn=chat.turns.find(t=>t.id===id)||chat.turns.at(-1);
+   if(draft){await showPreview();await keepPreview();}
+   else{$('#learn-save-choice').hidden=false;$('#learn-save-form').hidden=true;$('#learn-draft-status').textContent='';}
+   if(!$('#learn-save-dialog').open)$('#learn-save-dialog').showModal();
+ }
+ async function makeDraft(all){setBusy(true,'正在整理笔记…');$('#learn-draft-status').textContent='正在整理…';$('#learn-save-choice').hidden=true;
+   const key=`learning-preview:${chat.id}`;
+   try{const result=await api.run('draft',{chatId:chat.id,turnId:all?undefined:materialTurn.id});
+     // Keep completed output even if the user has already left this mounted view.
+     let stored=true;try{await drafts.save(key,result.draft);}catch{stored=false;}
+     if(destroyed)return;draft=result.draft;previewKey=key;await showPreview();
+     $('#learn-save-status').textContent=stored?'已自动暂存':'暂存失败，请先保存笔记';
+   }catch(e){if(!destroyed){$('#learn-draft-status').textContent=e.message;$('#learn-save-choice').hidden=false;}}finally{if(!destroyed)setBusy(false);}
+ }
+ async function submit(event){event.preventDefault();if(busy)return;const question=$('#learn-question').value.trim();if(!question)return;const inputKey=questionKey();requestId||=crypto.randomUUID();chat||={id:crypto.randomUUID(),revision:0,title:question.slice(0,80),materials:[],turns:[]};
+   const id=requestId,sentKey=inputKey;pending={id,question};$('#learn-question').value='';setBusy(true);notice('');render(true);
    try{
      const result=await api.run('ask',{chatId:chat.id,turnId:id,revision:chat.revision,question,scope},progress=>{if(destroyed||pending?.id!==id)return;Object.assign(pending,progress);render();});
      if(destroyed)return;chat=result.chat;requestId=null;pending=null;render();api.setChat?.(chat.id);
+     await drafts.clear(sentKey).catch(()=>notice('回复已保存，输入暂存未能清理。'));
      try{await refreshList();}catch{notice('回复已保存，对话列表暂未刷新。');}
-   }catch(e){if(!destroyed){pending=null;$('#learn-question').value=question;render();notice(e.message+' 问题已恢复，可重试。',true);}}
+   }catch(e){if(!destroyed){pending=null;$('#learn-question').value=question;void keepQuestion();render();notice(e.message+' 问题已恢复，可重试。',true);}}
    finally{if(!destroyed){setBusy(false);$('#learn-question').focus();}}
  }
  const click=async e=>{const b=e.target.closest('button');if(!b)return;try{
@@ -65,25 +112,33 @@ export function mountLearning(root,api){
    if(b.dataset.chat)return await openChat(b.dataset.chat);
    if(b.dataset.ref)return await materials(b.dataset.turn,b.dataset.ref);
    if(b.dataset.materialTab){materialTab=b.dataset.materialTab;return await materials(materialTurn.id);}
-   if(b.dataset.suggestion){$('#learn-question').value=b.dataset.suggestion;$('#learn-question').focus();return;}
-   if(b.dataset.action==='new'){if(busy)return;chat=null;pending=null;requestId=null;$('#learn-question').value='';render();$('.learn-shell').classList.remove('history-open');$('[data-action="history"]').setAttribute('aria-expanded','false');api.setChat?.('');}
+   if(b.dataset.suggestion){$('#learn-question').value=b.dataset.suggestion;++questionRevision;void keepQuestion();$('#learn-question').focus();return;}
+   if(b.dataset.action==='new'){if(busy)return;chat=null;pending=null;requestId=null;$('#learn-question').value='';render();$('.learn-shell').classList.remove('history-open');$('[data-action="history"]').setAttribute('aria-expanded','false');api.setChat?.('');await restoreTemporary();}
    if(b.dataset.action==='scope'){renderScopes();$('#learn-scope-dialog').showModal();}
    if(b.dataset.action==='all-notes'){scope=[];renderScopes();}
    if(b.dataset.action==='scope-done'){$('#learn-scope-dialog').close();$('#learn-scope').textContent=scope.length?`已选 ${scope.length} 篇 ▾`:'全部笔记 ▾';}
    if(b.dataset.action==='materials'){materialTab='used';await materials(b.dataset.turn);}
-   if(b.dataset.action==='save')openSave(b.dataset.turn);
-   if(b.dataset.action==='draft-round'||b.dataset.action==='draft-chat')await makeDraft(b.dataset.action==='draft-chat');
+   if(!busy&&(b.dataset.action==='save'||b.dataset.action==='resume-preview'))await openSave(b.dataset.turn);
+   if(b.dataset.action==='redraft'){if(busy)return;$('#learn-save-choice').hidden=false;$('#learn-save-form').hidden=true;}
+   if(!busy&&(b.dataset.action==='draft-round'||b.dataset.action==='draft-chat'))await makeDraft(b.dataset.action==='draft-chat');
    if(b.dataset.action==='settings')await api.settings();
  }catch(e){notice(e.message,true);}};
  root.addEventListener('click',click);$('#learn-form').addEventListener('submit',submit);
  $('#learn-note-search').oninput=renderScopes;$('#learn-note-options').onchange=e=>{scope=e.target.checked?[...new Set([...scope,e.target.value])]:scope.filter(id=>id!==e.target.value);};
- $('#learn-question').oninput=()=>{requestId=null;};$('#learn-question').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#learn-form').requestSubmit();}};
- $('#learn-save-form').onsubmit=async e=>{e.preventDefault();if(busy)return;setBusy(true,'正在保存笔记…');$('#learn-save-status').textContent='保存中…';
-   try{draft={...draft,title:$('#learn-draft-title').value,text:$('#learn-draft-body').value};const {note}=await api.run('save',{draft});$('#learn-save-status').innerHTML=`已保存 · <a href="${esc(noteURL(note.id))}" target="_blank" rel="noopener">打开笔记 ↗</a>`;$('#learn-save-form button[type="submit"]').disabled=true;}
-   catch(e){$('#learn-save-status').textContent=e.message;}finally{setBusy(false);}
+ $('#learn-question').oninput=()=>{requestId=null;++questionRevision;void keepQuestion();};
+ $('#learn-draft-title').oninput=$('#learn-draft-body').oninput=()=>{if(!busy)void keepPreview();};$('#learn-question').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#learn-form').requestSubmit();}};
+ $('#learn-save-form').onsubmit=async e=>{e.preventDefault();if(busy||!draft)return;setBusy(true,'正在保存笔记…');
+   const current=draft,key=previewKey;++previewRevision;current.title=$('#learn-draft-title').value;current.text=$('#learn-draft-body').value;
+   $('#learn-draft-title').readOnly=$('#learn-draft-body').readOnly=true;$('#learn-save-form button[type="submit"]').disabled=true;
+   $('#learn-save-status').textContent='保存中…';
+   try{await drafts.save(key,current).catch(()=>{});const {note}=await api.run('save',{draft:current});
+     let cleared=true;try{await drafts.clear(key);}catch{cleared=false;}
+     if(destroyed)return;draft=null;previewButton();$('#learn-save-status').innerHTML=`已保存 · <a href="${esc(noteURL(note.id))}" target="_blank" rel="noopener">打开笔记 ↗</a>${cleared?'':' · 本机暂存未能清理'}`;
+   }catch(e){if(!destroyed){$('#learn-save-status').textContent=e.message;$('#learn-save-form button[type="submit"]').disabled=false;}}
+   finally{if(!destroyed){$('#learn-draft-title').readOnly=$('#learn-draft-body').readOnly=!draft;setBusy(false);}}
  };
- $('#learn-save-dialog').addEventListener('close',()=>{$('#learn-save-form button[type="submit"]').disabled=false;});
+
  render();
- (async()=>{try{const [{notes:list}]=await Promise.all([api.request({path:'/api/notes'}),refreshList()]);notes=list.filter(n=>!n.deletedAt&&!n.archived&&n.status!=='inbox');if(api.chatId)await openChat(api.chatId);const status=await api.run('status');if(!status.configured)notice('先在阅读设置中配置 DeepSeek，再开始提问。');}catch(e){notice(e.message,true);}})();
+ (async()=>{try{const [{notes:list}]=await Promise.all([api.request({path:'/api/notes'}),refreshList()]);notes=list.filter(n=>!n.deletedAt&&!n.archived&&n.status!=='inbox');if(api.chatId)await openChat(api.chatId);else await restoreTemporary();const status=await api.run('status');if(!status.configured)notice('先在阅读设置中配置 DeepSeek，再开始提问。');}catch(e){notice(e.message,true);}})();
  return ()=>{destroyed=true;editor?.destroy();root.removeEventListener('click',click);root.innerHTML='';};
 }

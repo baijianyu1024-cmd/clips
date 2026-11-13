@@ -50,9 +50,10 @@ const flush = async () => { for (let i = 0; i < 8; i++) await new Promise(r => s
 function setup(options={}) {
   dom('<section id="reading-tools"></section>');
   let page = { id: 1, url: 'https://example.com/a', title: 'A' };
-  const adapter = { page: async () => page, capture: async () => ({ ...page, status: 'partial', text: paragraph, reason: '仅当前已加载部分' }), config: async () => ({ configured: true }), understand: async () => ({ text: '检索增强生成' }), cloud: () => assert.fail('No cloud writes or reads for understanding'), write: () => assert.fail('No local persistence') };
+  const cache=options.cache||new Map();
+  const adapter = { read:async key=>structuredClone(cache.get(key)||null),write:async(key,value)=>cache.set(key,structuredClone(value)),remove:async key=>cache.delete(key), page: async () => page, capture: async () => ({ ...page, status: 'partial', text: paragraph, reason: '仅当前已加载部分' }), config: async () => ({ configured: true }), understand: async () => ({ text: '检索增强生成' }), cloud: () => assert.fail('No cloud writes or reads for understanding') };
   const controller = createReadingTools({ adapter, getPage: () => page, getNotes: () => [], settings: async () => {},...options });
-  return { adapter, controller, switchPage: () => { page = { id: 2, url: 'https://example.com/b', title: 'B' }; controller.pageChanged(); }, click: async action => { document.querySelector(`[data-reading-action=${action}]`).click(); await flush(); } };
+  return { adapter, controller, cache, switchPage: (url='https://example.com/b') => { page = { id: 2, url, title: 'B' }; controller.pageChanged(); }, click: async action => { document.querySelector(`[data-reading-action=${action}]`).click(); await flush(); } };
 }
 test('material discovers only substantial visible article visuals and reports omissions', () => {
   dom(`<article><p>${paragraph}</p><canvas></canvas><img alt="图示"><img alt="未读区域"></article><aside><canvas></canvas></aside>`);
@@ -168,4 +169,26 @@ test('sidebar clears sent text immediately, renders streaming reply, and restore
  document.querySelector('[data-reading-action=send]').click();assert.equal(input.value,'');assert.match(document.querySelector('.understand-result').textContent,/什么是 RAG/);
  await flush();progress({text:'**检索增强生成**'});assert.equal(document.querySelector('.understand-message.assistant strong').textContent,'检索增强生成');
  finish.reject(Error('网络中断'));await flush();assert.equal(input.value,'什么是 RAG？');assert.equal(document.querySelectorAll('.understand-message').length,0);
+});
+
+test('understanding preview survives remount with original question, images and destination; failed save retains edits',async()=>{
+ const cache=new Map(),options={...imageOptions,cache,getActive:()=>({id:'note-a',title:'A 笔记'})};
+ let t=setup(options);await flush();await pasteImage('解释这张图');await t.click('send');await t.click('prepare-thought');
+ const input=document.querySelector('#understand-thought-text');input.value='我修改后的理解';input.dispatchEvent(new window.Event('input'));await flush();
+ assert.equal(document.querySelector('.understand-save-status').textContent,'已自动暂存');
+ await t.click('discard-thought');assert.equal(document.querySelector('.understand-thought').hidden,true);await t.click('prepare-thought');assert.equal(document.querySelector('#understand-thought-text').value,'我修改后的理解');
+ t.switchPage();await flush();assert.equal(document.querySelector('.understand-thought').hidden,true);
+ let fail=true,saved;
+ t=setup({...options,saveThought:async value=>{saved=value;if(fail)throw Error('离线');}});await flush();
+ assert.equal(document.querySelector('#understand-thought-text').value,'我修改后的理解');assert.match(document.querySelector('.understand-destination').textContent,/A 笔记/);
+ await t.click('save-thought');assert.equal(document.querySelector('.understand-save-status').textContent,'离线');assert.equal(cache.size,1);
+ fail=false;await t.click('save-thought');assert.equal(saved.noteId,'note-a');assert.equal(saved.thought,'我修改后的理解');assert.equal(saved.material.turns[0].question,'解释这张图');assert.equal(saved.material.images.length,1);assert.equal(cache.size,0);
+ t=setup(options);await flush();assert.equal(document.querySelector('.understand-thought').hidden,true);
+});
+test('understanding keeps preview usable on quota errors and delayed generation stays with its original page',async()=>{
+ const t=setup({getActive:()=>({id:'note-a',title:'A'})});await flush();type('问题');await t.click('send');
+ t.adapter.write=async()=>{throw Error('quota');};await t.click('prepare-thought');assert.match(document.querySelector('.understand-save-status').textContent,/暂存失败/);assert.equal(document.querySelector('.understand-thought').hidden,false);
+ const cache=new Map(),u=setup({cache,getActive:()=>({id:'note-a',title:'A'})});await flush();type('问题');await u.click('send');let complete;u.adapter.understand=()=>new Promise(resolve=>complete=resolve);
+ document.querySelector('[data-reading-action=prepare-thought]').click();await flush();u.switchPage();complete({text:'稍后完成的预览'});await flush();assert.equal(document.querySelector('.understand-thought').hidden,true);
+ assert.equal(cache.get('understanding-preview:https://example.com/a').text,'稍后完成的预览');u.switchPage('https://example.com/a');await flush();assert.equal(document.querySelector('#understand-thought-text').value,'稍后完成的预览');
 });

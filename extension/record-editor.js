@@ -22,15 +22,15 @@ export function createRecordEditor({ adapter, native, active, upsert, rerender, 
   root.innerHTML = `<label>我的想法<textarea rows="4" maxlength="40000" placeholder="补充自己的理解，也可以直接粘贴截图…"></textarea></label><label class="record-text-label"><span>原文摘录</span><textarea class="record-text" rows="4" maxlength="40000" placeholder="编辑原文摘录…"></textarea></label><p class="record-anchor-hint hint" hidden>修改引用原文后，会解除原来的精确定位与译文；仅修改想法或图片会保留。</p>${markdownHelpHTML}<div class="record-edit-images"></div><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden><div class="record-edit-tools"><button type="button" class="quiet" data-edit="images">＋ 添加图片</button><small>支持粘贴或拖入</small></div><p class="record-edit-status" role="status"></p><button type="button" class="quiet record-reload" data-edit="reload" hidden>载入最新内容（放弃本次修改）</button><div class="record-edit-actions"><button type="button" class="quiet" data-edit="close">收起</button><button type="button" class="primary" data-edit="save">保存修改</button></div>`;
   const input = root.querySelector("textarea"), file = root.querySelector("input"), gallery = root.querySelector(".record-edit-images"), status = root.querySelector(".record-edit-status");
   const reload = root.querySelector(".record-reload"), textInput=root.querySelector(".record-text");
-  let session = null, queue = Promise.resolve(), busy = false, renderId = 0;
+  let version=0, session = null, queue = Promise.resolve(), busy = false, renderId = 0;
   const urls = new Set();
   const key = s => s.kind === "clip" ? `record-edit:${s.noteId}:${s.baseline.id}` : `content-edit:${s.noteId}:${s.kind}:${s.target||"new"}`;
   const persist = () => {
     if (!session) return Promise.resolve();
     session.thought = input.value; session.text = textInput.value;
-    const value = structuredClone(session), storageKey = key(value);
+    const value = structuredClone(session), storageKey = key(value), seq=++version;status.textContent="正在暂存…";
     queue = queue.catch(() => {}).then(() => adapter.write(storageKey, value));
-    queue.catch(() => { status.textContent = "草稿未能留存，请先复制文字。"; }); return queue;
+    queue.then(() => { if(session && key(session)===storageKey && seq===version)status.textContent="已自动暂存"; }).catch(() => { if(session && key(session)===storageKey && seq===version)status.textContent="暂存失败，请先保存"; }); return queue;
   };
   async function thumbnails() {
     const seq = ++renderId, s = session; gallery.replaceChildren();
@@ -62,7 +62,7 @@ export function createRecordEditor({ adapter, native, active, upsert, rerender, 
     const added = await stageImages(key(s), files, s.attachments);
     s.attachments.push(...added);
     if (text) { const field=selection?.field==='text'||!["clip","legacy","image"].includes(s.kind)?textInput:input; const start=selection?.start??field.value.length,end=selection?.end??field.value.length;if(field.value.length-(end-start)+text.length<=field.maxLength)field.setRangeText(text,start,end,"end"); }
-    await persist(); await thumbnails(); status.textContent = "图片已加入草稿，保存后更新这条记录。";
+    await persist(); await thumbnails(); status.textContent = "已自动暂存";
   }
   async function save() {
     const s = session; await persist(); status.textContent = "正在保存…"; status.classList.remove("error");
@@ -88,7 +88,7 @@ export function createRecordEditor({ adapter, native, active, upsert, rerender, 
   root.addEventListener("click", e => { const action = e.target.closest("[data-edit]")?.dataset.edit; if (action === "images") file.click(); else if (action === "save") run(save); else if (action === "close") run(close); else if (action === "reload") run(loadLatest); });
   file.addEventListener("change", () => { const files = [...file.files]; file.value = ""; if (files.length) run(() => add(files)); });
   textInput.addEventListener("input",()=>{void persist();});
-  input.addEventListener("input", () => { status.textContent = "草稿留在本机"; status.classList.remove("error"); void persist(); });
+  input.addEventListener("input", () => { status.classList.remove("error"); void persist(); });
   root.addEventListener("paste", e => { const files = transferImages(e.clipboardData); if (!files.length || root.querySelector(".record-edit-tools").hidden) return; e.preventDefault(); const selection = [input,textInput].includes(e.target) ? { start: e.target.selectionStart, end: e.target.selectionEnd,field:e.target===textInput?"text":"thought" } : null; if (!busy) run(() => add(files, e.clipboardData.getData("text/plain"), selection)); });
   root.addEventListener("dragover", e => { if ([...e.dataTransfer.types].includes("Files")) { e.preventDefault(); root.classList.add("image-dragover"); } });
   root.addEventListener("dragleave", e => { if (!root.contains(e.relatedTarget)) root.classList.remove("image-dragover"); });
@@ -100,13 +100,13 @@ export function createRecordEditor({ adapter, native, active, upsert, rerender, 
       if (session) await persist();
       const clip = contentRecord(note,kind,clipId); if (!clip) throw new Error("找不到这条记录，请刷新后重试。");
       const fresh = { kind, target:clipId, operationId:crypto.randomUUID(), text:clip.text||"", noteId: note.id, baseline: structuredClone(clip), thought: clip.thought || "", attachments: (clip.images || []).map(image => ({ id: crypto.randomUUID(), name: image.name, image })) };
-      session = { ...fresh, ...await adapter.read(key(fresh)) };
+      const cached=await adapter.read(key(fresh));session = { ...fresh, ...cached };
       const mixed=["clip","legacy","image"].includes(kind), withImages=mixed||kind==="core";
       root.setAttribute('aria-label',kind==='core'?'编辑核心摘要':'编辑随读记录');
       input.closest("label").hidden=!mixed; root.querySelector(".record-text-label span").textContent=kind==="core"?"核心摘要":kind==="review"||kind==="new-review"?"后来的理解":kind==="ai"?"AI 摘要":"原文摘录";
       root.querySelector(".record-edit-tools").hidden=!withImages;root.querySelector(".record-anchor-hint").hidden=!(clip.transcriptAnchor||clip.anchor);
       textInput.maxLength=input.maxLength=kind==="clip"||kind==="image"?20000:40000;textInput.value=session.text??clip.text??"";
-      input.value = session.thought; reload.hidden = editable(session.baseline) === editable(clip); status.classList.remove("error"); status.textContent = editable(session.baseline) !== editable(clip) ? "已恢复本机草稿；这条记录另有更新，保存前请核对。" : "草稿留在本机，点击保存后更新笔记。";
+      input.value = session.thought; reload.hidden = editable(session.baseline) === editable(clip); status.classList.remove("error"); status.textContent = editable(session.baseline) !== editable(clip) ? "已恢复本机草稿；这条记录另有更新，保存前请核对。" : cached ? "已自动暂存" : "";
       rerender(); await thumbnails(); root.scrollIntoView?.({ behavior: "smooth", block: "center" }); (mixed ? input : textInput).focus({ preventScroll: true });
     },
     mount() {

@@ -27,7 +27,7 @@ let savedImageObserver = null, savedImageScope = null;
 const savedImageCache = new Map();
 const previewURLs = new Map();
 let notes = [], page = { url: "", title: "正在识别页面…" }, activeId = null, draft = {}, connected = false, busy = false, aiTarget = null, persistQueue = Promise.resolve(), pageSequence = 0;
-let aiPreparation = 0, aiPreparing = false;
+let aiPreparation = 0, aiPreparing = false, draftVersion = 0, draftSaveState = "", supplementVersion = 0, outputVersion = 0;
 const contextPrompt = createSaveContextPrompt($("#save-context-dialog"));
 const active = () => notes.find(n => n.id === activeId && !n.deletedAt && !n.archived);
 const usablePage = () => isReadingPage(page);
@@ -43,7 +43,7 @@ const transcripts = createTranscriptPanel({ active, upsert, notice, addOverview:
   if (draft.quote) throw new Error("先保存或移除当前摘录，再添加字幕。");
   draft.quote = quote; keepDraft(); await persistQueue; renderQuote();
   document.querySelector("#composer").scrollIntoView({ behavior: "smooth", block: "center" });
-  notice("字幕已加入草稿，补上自己的想法后保存。");
+  notice("已添加字幕");
 } });
 const readingTools = createReadingTools({ adapter, getPage: () => page, getNotes: () => notes, getActive: active, saveThought: saveUnderstandingThought, settings: showSettings });
 async function saveUnderstandingThought(d) {
@@ -82,7 +82,7 @@ async function saveQuickQuote(id) {
   const result = await adapter.completeQuickQuote(id, noteId);
   await renderQuickQuotes(); await refreshNotes();
   if (result.status !== "saved") throw new Error(result.error || "请先读取视频字幕，再重试保存引用。");
-  notice(result.warning || "引用已保存到随读记录，可以继续补充想法和图片。", !!result.warning);
+  notice(result.warning || "引用已保存", !!result.warning);
 }
 function notice(message, error = false) {
   const openDialogs = [...document.querySelectorAll("dialog[open]")];
@@ -99,15 +99,15 @@ function pendingWrite(key, value) {
 }
 function keepDraft() {
   if (!activeId) return;
-  const id = activeId;
+  const id = activeId, version = ++draftVersion;
   draft = { ...draft, thought: $("#thought").value, id: draft.id || crypto.randomUUID(), updatedAt: Date.now() };
-  $("#draft-status").textContent = "正在留存草稿…";
-  pendingWrite("draft:" + id, draft).then(() => { if (activeId === id) $("#draft-status").textContent = "草稿已留在本机"; }).catch(() => {});
+  draftSaveState="正在暂存…"; $("#draft-status").textContent = draftSaveState;
+  pendingWrite("draft:" + id, draft).then(() => { if (activeId === id && version === draftVersion) { draftSaveState="已自动暂存"; $("#draft-status").textContent=draftSaveState; } }).catch(() => { if(activeId===id && version===draftVersion) { draftSaveState="暂存失败，请先保存"; $("#draft-status").textContent=draftSaveState; } });
 }
 async function selectNote(id) {
   if (activeId) { keepDraft(); await persistQueue; }
   activeId = id; await adapter.write("activeNoteId", id);
-  draft = (await adapter.read("draft:" + id)) || {};
+  draft = (await adapter.read("draft:" + id)) || {};draftSaveState="已自动暂存";
   $("#thought").value = draft.thought || "";
   await restoreImageDraft(); render();
 }
@@ -173,7 +173,7 @@ function renderQuote() {
   renderRecordContext();
   const quote = draft.quote, note = active();
   $("#pending-quote").innerHTML = quote ? `<div class="quote-draft"><button data-action="remove-quote" aria-label="移除这段摘录">×</button>${viewQuote(quote).original ? `<div class="text markdown-body">${renderMarkdown(viewQuote(quote).original)}</div>` : ""}${viewQuote(quote).pending ? `<p class="hint">中文译文待补齐，保存后可补译。</p>` : ""}${viewQuote(quote).translation ? `<div class="entry-translation"><small>中文 · AI 译文</small><div class="text markdown-body">${renderMarkdown(quote.translation.text)}</div></div>` : ""}<small>${escape(quote.sourceTitle || host(quote.sourceUrl))}${quote.videoTime !== null && quote.videoTime !== undefined ? " · " + timeLabel(quote.videoTime) : ""}</small>${note && !matches(note, quote.sourceUrl) ? `<small class="warning">来自另一篇网页；保存时会加入当前笔记并关联这个来源。</small>` : ""}</div>` : "";
-  $("#draft-status").textContent = draft.attachments?.length ? `${draft.attachments.length} 张图片随本条记录保存` : draft.thought || draft.quote ? "草稿已留在本机" : "保存到当前笔记";
+  $("#draft-status").textContent = (draft.attachments?.length || draft.thought || draft.quote) ? draftSaveState : "";
 }
 function renderEntries() {
   recordEditor.detach(); const note=active(); savedImageObserver?.disconnect();
@@ -262,7 +262,7 @@ async function collect() {
   const text = draft.quote ? draft.quote.text + "\n\n" + captured.text : captured.text;
   if (text.length > 20000) throw new Error("一次摘录最多 20,000 字，请先保存当前摘录。");
   draft.quote = { text, sourceUrl: canonical(captured.url), sourceTitle: (captured.title || "").slice(0, 200), videoTime: captured.position.videoTime };
-  keepDraft(); await persistQueue; await adapter.clearPending(); renderQuote(); notice("摘录已加入草稿，可以补一句自己的理解。");
+  keepDraft(); await persistQueue; await adapter.clearPending(); renderQuote(); notice("已添加摘录");
 }
 async function restoreImageDraft() {
   // Preserve a 0.8 upload that succeeded before its old standalone save failed.
@@ -301,7 +301,7 @@ async function addImages(files, pastedText = "", selection = null) {
     else textOverflow = true;
   }
   keepDraft(); await persistQueue; renderQuote(); await renderImages();
-  notice(textOverflow ? "图片已附加，但粘贴文字超过 20,000 字，请分条记录。" : `${added.length} 张图片已加入草稿。可以继续写想法，点「保存发现」一起保存。`, textOverflow);
+  notice(textOverflow ? "图片已附加，但粘贴文字超过 20,000 字，请分条记录。" : `已添加 ${added.length} 张图片`, textOverflow);
 }
 async function removeImage(id) {
   const item = draft.attachments?.find(item => item.id === id); if (!item) return;
@@ -388,6 +388,7 @@ async function showAI() {
   const legacy = !saved && previous?.manual;
   $("#ai-source").value = saved?.sourceMode || (legacy ? "supplement" : "page");
   $("#ai-supplement").value = saved?.supplement ?? (legacy ? previous.text : "");
+  $("#ai-supplement-status").textContent=saved?.supplement?"已自动暂存":"";
   if (legacy) keepSummaryDraft();
   $("#ai-target").textContent = note.title;
   renderSourceHint();
@@ -400,15 +401,16 @@ function renderSourceHint() {
   const sourceMode = $("#ai-source").value;
   $("#ai-optional").textContent = sourceMode === "supplement" ? "必填" : "选填";
   const hints = {
-    page: "生成时，Clips 会将可读取的原文、图片和随读记录连同你的补充交给 DeepSeek。",
-    records: "生成时，Clips 会将这篇笔记的随读记录、已存图片和你的补充交给 DeepSeek。",
-    supplement: "生成时，Clips 只会将上方的补充信息交给 DeepSeek。",
+    page: "DeepSeek · 使用可读取的原文、图片、随读记录和补充信息",
+    records: "DeepSeek · 使用随读记录、已存图片和补充信息",
+    supplement: "DeepSeek · 仅使用补充信息",
   };
   $("#ai-source-hint").textContent = hints[sourceMode];
 }
 function keepSummaryDraft() {
   if (!aiTarget) return;
-  pendingWrite("summaryDraft:" + aiTarget.id, { sourceMode: $("#ai-source").value, supplement: $("#ai-supplement").value });
+  const id=aiTarget.id,version=++supplementVersion;$("#ai-supplement-status").textContent="正在暂存…";
+  pendingWrite("summaryDraft:" + id, { sourceMode: $("#ai-source").value, supplement: $("#ai-supplement").value }).then(()=>{if(aiTarget?.id===id&&version===supplementVersion)$("#ai-supplement-status").textContent="已自动暂存";}).catch(()=>{if(aiTarget?.id===id&&version===supplementVersion)$("#ai-supplement-status").textContent="暂存失败，请先复制输入";});
 }
 function renderUsedMaterial(material) {
   $("#ai-used").hidden = !material;
@@ -429,13 +431,13 @@ async function renderJob() {
   generateButton.textContent = job?.status === "ready" || aiTarget.coreSummaryId ? "重新生成" : "生成摘要";
   $("#ai-used").hidden = !job || $("#ai-used").dataset.requestId !== job.id;
   if (!job) { $("#ai-result").innerHTML = ""; return; }
-  if (job.status === "running") $("#ai-result").innerHTML = `<h3 class="spin-label">${job.phase === "condensing" ? "正在精简摘要" : "正在生成"} · 可以关闭这个窗口继续记录</h3><div class="stream">${escape(job.text)}</div>`;
+  if (job.status === "running") $("#ai-result").innerHTML = `<h3 class="spin-label">${job.phase === "condensing" ? "正在精简摘要" : "正在生成"}</h3><div class="stream">${escape(job.text)}</div>`;
   else if (job.status === "error") $("#ai-result").innerHTML = `<p class="hint">${escape(job.error)}</p>`;
   else if (job.status === "ready") {
     if ($("#ai-result").dataset.job === job.id && $("#ai-output")) return;
     const edited = await adapter.read("aiOutput:" + job.id);
     if (id !== aiTarget?.id) return;
-    $("#ai-result").innerHTML = `<h3>${job.purpose === "core" ? "核心摘要草稿" : "此前的 AI 辅助摘要"} · ${escape(job.provider)}</h3><p class="hint">${job.warning ? escape(job.warning) : "可直接修改草稿，再保存到这篇笔记。"}</p><textarea id="ai-output" rows="9" maxlength="40000" aria-label="AI 摘要结果">${escape(edited ?? job.text)}</textarea>${markdownHelpHTML}<button class="primary" data-action="save-ai">${job.purpose === "core" ? "确认保存为核心摘要" : "保留为 AI 辅助记录"} ✓</button>`;
+    $("#ai-result").innerHTML = `<h3>笔记预览 · ${escape(job.provider)}</h3>${job.warning ? `<p class="hint">${escape(job.warning)}</p>` : ""}<textarea id="ai-output" rows="9" maxlength="40000" aria-label="AI 摘要结果">${escape(edited ?? job.text)}</textarea>${markdownHelpHTML}<small id="ai-output-status" role="status">已自动暂存</small><button class="primary" data-action="save-ai">${job.purpose === "core" ? "保存摘要" : "保留为 AI 辅助记录"} ✓</button>`;
     $("#ai-result").dataset.job = job.id;
   }
 }
@@ -471,7 +473,7 @@ async function generate() {
     const input = { ...material, id: requestId, noteId: note.id, title: target.title, purpose: "core", expectedCoreSummaryId: target.coreSummaryId };
     $("#ai-result").innerHTML = '<h3 class="spin-label">正在生成摘要</h3>';
     adapter.generate(input).then(() => {
-      if (stillOpen()) notice("摘要草稿已生成。");
+      if (stillOpen()) notice("笔记预览已生成");
     }).catch(error => {
       if (stillOpen()) notice(error.message, true);
     }).finally(() => {
@@ -489,7 +491,7 @@ function showSummaryConflict(note) {
   const section = document.createElement("section"); section.id = "ai-conflict"; section.className = "summary-conflict";
   section.dataset.expectedId = note.coreSummary?.id || "";
   section.dataset.noteId = note.id;
-  section.innerHTML = `<h3>当前已保存的摘要</h3><div class="markdown-body">${renderMarkdown(note.coreSummary?.text || "当前没有摘要正文。")}</div>${note.coreSummary?.images?.length ? `<p class="hint">另有 ${note.coreSummary.images.length} 张图片，更新正文时会保留。</p>` : ""}<p class="hint">上方是你的草稿。确认更新后，当前摘要会保留在历史版本中。</p><button class="primary" data-action="replace-ai">用这份草稿更新摘要</button>`;
+  section.innerHTML = `<h3>当前已保存的摘要</h3><div class="markdown-body">${renderMarkdown(note.coreSummary?.text || "当前没有摘要正文。")}</div>${note.coreSummary?.images?.length ? `<p class="hint">另有 ${note.coreSummary.images.length} 张图片，更新正文时会保留。</p>` : ""}<p class="hint">保存后保留当前摘要的历史版本。</p><button class="primary" data-action="replace-ai">更新摘要</button>`;
   $("#ai-result").append(section);
   $("[data-action='save-ai']").hidden = true;
 }
@@ -497,7 +499,7 @@ async function replaceAI() {
   const section = $("#ai-conflict"), id = aiTarget?.id;
   if (!section || section.dataset.noteId !== id) return;
   const job = await adapter.job(id);
-  if (!job?.record || job.id !== $("#ai-result").dataset.job) throw new Error("摘要草稿已变化，请重新打开后核对。");
+  if (!job?.record || job.id !== $("#ai-result").dataset.job) throw new Error("笔记预览已变化，请重新打开后核对。");
   await adapter.write("aiJob:" + id, { ...job, expectedCoreSummaryId: section.dataset.expectedId || null, record: { ...job.record, id: crypto.randomUUID() } });
   return saveAI();
 }
@@ -623,7 +625,10 @@ $("#thought").addEventListener("input", () => { markWritingPage(); keepDraft(); 
 $("#ai-supplement").addEventListener("input", keepSummaryDraft);
 $("#ai-source").addEventListener("change", () => { renderSourceHint(); keepSummaryDraft(); });
 $("#ai-result").addEventListener("input", event => {
-  if (event.target.id === "ai-output" && $("#ai-result").dataset.job) pendingWrite("aiOutput:" + $("#ai-result").dataset.job, event.target.value);
+  if (event.target.id === "ai-output" && $("#ai-result").dataset.job) {
+    const id=$("#ai-result").dataset.job,version=++outputVersion;$("#ai-output-status").textContent="正在暂存…";
+    pendingWrite("aiOutput:"+id,event.target.value).then(()=>{if($("#ai-result").dataset.job===id&&version===outputVersion)$("#ai-output-status").textContent="已自动暂存";}).catch(()=>{if($("#ai-result").dataset.job===id&&version===outputVersion)$("#ai-output-status").textContent="暂存失败，请先保存摘要";});
+  }
 });
 $("#image-file").addEventListener("change", () => {
   const files = [...$("#image-file").files]; $("#image-file").value = "";
@@ -662,7 +667,7 @@ async function init() {
   if (native) storageTarget = await adapter.target();
   notes = await adapter.read("cachedNotes") || [];
   activeId = await adapter.read("activeNoteId");
-  draft = activeId ? await adapter.read("draft:" + activeId) || {} : {};
+  draft = activeId ? await adapter.read("draft:" + activeId) || {} : {};draftSaveState="已自动暂存";
   $("#thought").value = draft.thought || "";
   await refreshPage();
   if (!native || storageTarget) { try { await refreshNotes(); } catch (e) { notice(e.message, true); } } else renderConnection();

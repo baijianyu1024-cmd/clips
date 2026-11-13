@@ -1,3 +1,4 @@
+import { createDraftStore } from './draft-store.js';
 import { canonical } from "./core.js";
 import { youtubeId } from "./youtube.js";
 import { contextForQuery } from "./understanding.js";
@@ -12,7 +13,9 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
   let key='',snapshot=null,loading=false,generation=0,explanation=0;
   let draftQuote=null,draftImages=[],addingImages=false,selecting=false;
   let conversation=null,pending=null,requestPending=false,chatError='',savedThrough=0;
-  let answerState=null,thoughtDraft=null,savingThought=false;
+  let answerState=null,thoughtDraft=null,savingThought=false,previewEpoch=0,previewVersion=0;
+  const previews=createDraftStore(adapter);
+  const previewKey=()=>`understanding-preview:${canonical(getPage().url)||getPage().url}`;
   root.innerHTML=`<details class="understand im-chat"><summary>理解 / 翻译</summary><div class="understand-body">
     <div class="im-chat-head"><button type="button" data-reading-action="new-chat" title="开始新对话">新对话</button></div>
     <div class="understand-result" role="log" aria-label="理解对话" aria-live="polite" aria-relevant="additions"></div>
@@ -25,7 +28,7 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
     </div>
     <div class="im-chat-meta"><small>Enter 发送 · Shift + Enter 换行</small><button type="button" class="im-save" data-reading-action="prepare-thought" hidden>保存到想法</button></div>
     <details class="reading-source" hidden></details>
-    <div class="understand-thought" hidden><label for="understand-thought-text">想法草稿</label><textarea id="understand-thought-text" data-plain-text rows="4" maxlength="20000"></textarea><p class="hint understand-destination"></p><div class="understand-thought-actions"><button type="button" data-reading-action="discard-thought">返回对话</button><button type="button" class="primary" data-reading-action="save-thought">确认保存</button></div></div>
+    <div class="understand-thought" hidden><label for="understand-thought-text">笔记预览</label><textarea id="understand-thought-text" data-plain-text rows="4" maxlength="20000"></textarea><p class="hint understand-destination"></p><div class="understand-thought-actions"><button type="button" data-reading-action="discard-thought">返回对话</button><button type="button" class="primary" data-reading-action="save-thought">保存到想法</button></div></div>
     <p class="understand-save-status" role="status"></p>
   </div></details>`;
   const $=selector=>root.querySelector(selector),input=$('#understand-message');
@@ -49,8 +52,8 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
     for(const button of root.querySelectorAll('[data-reading-action=selection],[data-reading-action=images],[data-reading-action=remove-quote],[data-remove-understand]'))button.disabled=locked||addingImages||selecting;
     $('[data-reading-action=new-chat]').disabled=savingThought||addingImages||selecting;
     const save=$('[data-reading-action=prepare-thought]'),turns=conversation?.turns.length||0;
-    save.hidden=!turns;save.disabled=locked||!!thoughtDraft||savedThrough===turns;
-    save.textContent=savedThrough&&savedThrough===turns?'已保存到想法':'保存到想法';
+    save.hidden=!turns&&!thoughtDraft;save.disabled=locked||(!thoughtDraft&&savedThrough===turns);
+    save.textContent=thoughtDraft?'笔记预览':savedThrough&&savedThrough===turns?'已保存到想法':'保存到想法';
   }
   function messageHTML(turn) {
     return `<article class="understand-message user">${turn.source?`<blockquote>${esc(turn.source)}</blockquote>`:''}${turn.manualImages?.length?`<div class="im-message-images">${turn.manualImages.map(image=>`<img src="${esc(image.dataUrl)}" alt="${esc(image.label)}">`).join('')}</div>`:''}<div class="im-message-text">${esc(turn.question)}</div></article>`;
@@ -64,8 +67,8 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
     $('.understand-status').classList.toggle('error',!!chatError);
   }
   function clearThought(){thoughtDraft=null;$('.understand-thought').hidden=true;$('.understand-save-status').textContent='';}
-  function resetConversation(){explanation++;conversation=null;answerState=null;pending=null;requestPending=false;chatError='';savedThrough=0;draftQuote=null;draftImages=[];input.value='';clearThought();renderDraft();renderChat();}
-  function pageChanged(){const next=pageKey(getPage());if(next===key)return;key=next;generation++;snapshot=null;loading=false;resetConversation();renderSource();}
+  function resetConversation(preservePreview=false){explanation++;conversation=null;answerState=null;pending=null;requestPending=false;chatError='';savedThrough=0;draftQuote=null;draftImages=[];input.value='';if(!preservePreview)clearThought();renderDraft();renderChat();}
+  function pageChanged(){const next=pageKey(getPage());if(next===key)return;key=next;generation++;snapshot=null;loading=false;resetConversation();renderSource();void restorePreview();}
   async function stillCurrent(capturedKey){return key===capturedKey&&pageKey(await adapter.page())===capturedKey;}
   async function read({ refresh = false } = {}) {
     pageChanged();
@@ -138,27 +141,51 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
     }catch(error){if(seq===explanation&&await stillCurrent(capturedKey)){chatError=error.message;input.value=asked;draftQuote=quote;draftImages=sentImages;pending=null;renderDraft();}}
     finally{if(seq===explanation){requestPending=false;renderChat();}}
   }
+  function showThought(){
+    $('#understand-thought-text').value=thoughtDraft.text;
+    $('.understand-destination').textContent=`保存到「${thoughtDraft.noteTitle||getActive()?.title||'原笔记'}」`;
+    $('.understand-thought').hidden=false;$('.understand').open=true;renderActions();
+  }
+  async function restorePreview(){
+    const seq=++previewEpoch,storageKey=previewKey();
+    try{
+      const saved=await previews.load(storageKey);
+      if(seq!==previewEpoch||storageKey!==previewKey())return;
+      if(saved?.id&&saved.noteId&&typeof saved.text==='string'&&Array.isArray(saved.material?.turns)){
+        thoughtDraft={...saved,storageKey};showThought();$('.understand-save-status').textContent='已自动暂存';
+      }
+    }catch{if(seq===previewEpoch)$('.understand-save-status').textContent='笔记预览读取失败，请稍后重试。';}
+  }
+  async function keepThought(){
+    if(!thoughtDraft||savingThought)return;
+    const current=thoughtDraft,seq=++previewVersion;current.text=$('#understand-thought-text').value;
+    $('.understand-save-status').textContent='正在暂存…';
+    try{await previews.save(current.storageKey,current);if(current===thoughtDraft&&seq===previewVersion)$('.understand-save-status').textContent='已自动暂存';}
+    catch{if(current===thoughtDraft&&seq===previewVersion)$('.understand-save-status').textContent='暂存失败，请先保存到想法。';}
+  }
   async function prepareThought() {
+    if(thoughtDraft){showThought();return;}
     const note=getActive();if(!note)throw new Error('请先开始或选择目标笔记，再保存到想法。');
     if(!answerState||savingThought||requestPending||thoughtDraft||savedThrough===answerState.turns.length)return;
-    const material=structuredClone(answerState),seq=explanation,capturedKey=key;
+    const material=structuredClone(answerState),seq=explanation,capturedKey=key,storageKey=previewKey();++previewEpoch;
     savingThought=true;renderChat();$('.understand-save-status').textContent='正在整理这段对话…';
     try{
       const result=await adapter.understand({purpose:'thought',source:material.source,question:material.question,answer:material.answer,turns:material.turns});
+      const preview={id:crypto.randomUUID(),noteId:note.id,noteTitle:note.title,material,images:[],text:result.text,storageKey};
+      let stored=true;try{await previews.save(storageKey,preview);}catch{stored=false;}
       if(seq!==explanation||!await stillCurrent(capturedKey))return;
-      thoughtDraft={id:crypto.randomUUID(),noteId:note.id,material,images:[]};
-      $('#understand-thought-text').value=result.text;
-      $('.understand-destination').textContent=`保存到「${note.title}」 · 基于前 ${material.turns.length} 轮对话整理`;
-      $('.understand-thought').hidden=false;$('.understand-save-status').textContent='';
+      thoughtDraft=preview;showThought();$('.understand-save-status').textContent=stored?'已自动暂存':'暂存失败，请先保存到想法。';
     }finally{savingThought=false;renderChat();}
   }
   async function commitThought() {
     if(savingThought||!thoughtDraft)return;
     const draft=thoughtDraft,seq=explanation,text=$('#understand-thought-text').value.trim();
     if(!text)throw new Error('请填写想法。');if(!saveThought)throw new Error('请安装插件后使用保存功能。');
-    savingThought=true;renderChat();$('#understand-thought-text').readOnly=true;
-    try{if(await saveThought({...draft,thought:text})===false)return;
-      if(seq===explanation){savedThrough=draft.material.turns.length;$('.understand-thought').hidden=true;$('.understand-save-status').textContent='已保存为一条新的想法。';thoughtDraft=null;}
+    savingThought=true;++previewVersion;renderChat();$('#understand-thought-text').readOnly=true;
+    try{draft.text=text;await previews.save(draft.storageKey,draft).catch(()=>{});
+      if(await saveThought({...draft,thought:text})===false)return;
+      let cleared=true;try{await previews.clear(draft.storageKey);}catch{cleared=false;}
+      if(seq===explanation&&thoughtDraft===draft){savedThrough=draft.material.turns.length;$('.understand-thought').hidden=true;$('.understand-save-status').textContent=cleared?'已保存到想法':'已保存到想法，本机暂存未能清理';thoughtDraft=null;}
     }finally{savingThought=false;$('#understand-thought-text').readOnly=false;renderChat();}
   }
   async function addImages(files,text='',selection=null) {
@@ -182,15 +209,16 @@ export function createReadingTools({ adapter, getPage, getNotes, settings, getAc
   $('.im-composer').addEventListener('paste',event=>{const files=transferImages(event.clipboardData);if(!files.length)return;event.preventDefault();void addImages(files,event.clipboardData.getData?.('text/plain')||'',{start:input.selectionStart,end:input.selectionEnd}).catch(report);});
   $('.im-composer').addEventListener('dragover',event=>{if([...event.dataTransfer.types].includes('Files'))event.preventDefault();});
   $('.im-composer').addEventListener('drop',event=>{const files=transferImages(event.dataTransfer);if(files.length){event.preventDefault();void addImages(files).catch(report);}});
+  $('#understand-thought-text').addEventListener('input',()=>void keepThought());
   input.addEventListener('input',()=>{chatError='';resizeInput();renderActions();$('.understand-status').textContent='';});
   input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){event.preventDefault();void send().catch(report);}});
   root.addEventListener('click',event=>{
     const remove=event.target.closest('[data-remove-understand]');if(remove){if(requestPending||savingThought)return;draftImages=draftImages.filter(image=>image.id!==remove.dataset.removeUnderstand);renderDraft();return;}
     const action=event.target.closest('[data-reading-action]')?.dataset.readingAction;if(!action)return;
-    if(action==='new-chat'){if(savingThought||addingImages||selecting)return;if(thoughtDraft&&!window.confirm('想法草稿尚未保存，开始新对话会丢弃这份草稿。继续吗？'))return;resetConversation();renderSource();return;}
+    if(action==='new-chat'){if(savingThought||addingImages||selecting)return;resetConversation(true);renderSource();return;}
     if(action==='remove-quote'){if(requestPending||savingThought)return;draftQuote=null;renderDraft();return;}
     if(action==='images'){$('#understand-files').click();return;}
-    if(action==='discard-thought'){if(!savingThought){clearThought();renderChat();}return;}
+    if(action==='discard-thought'){if(!savingThought){$('.understand-thought').hidden=true;renderChat();}return;}
     if(action==='prepare-thought'||action==='save-thought'){void(action==='prepare-thought'?prepareThought():commitThought()).catch(error=>{$('.understand-save-status').textContent=error.message;});return;}
     if(action==='send')void send().catch(report);
     if(action==='selection')void selectText().catch(report);

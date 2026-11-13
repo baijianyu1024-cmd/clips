@@ -90,7 +90,7 @@ export function createLearningEngine({request,credentials,allowed,storage,fetche
    return request({path:'/api/notes',method:'POST',body:{id:d.id,fields}});
  }
  return async function run(action,input={},onProgress){
-   if(action==='status'){const {key}=await credentials();return {configured:!!key&&await allowed(),version:'0.14.1'};}
+   if(action==='status'){const {key}=await credentials();return {configured:!!key&&await allowed(),version:'0.14.2'};}
    if(action==='ask'||action==='draft'||action==='save'){
      const id=input.chatId||input.draft?.chatId;if(running.has(id))throw new Error('此对话正在处理，请稍候。');running.add(id);
      try{return await (action==='ask'?ask(input,onProgress):action==='draft'?draft(input):saveNote(input));}finally{running.delete(id);}
