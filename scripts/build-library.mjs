@@ -9,3 +9,4 @@ for(const name of [...names].sort()){const pkg=JSON.parse(await readFile(`node_m
 await writeFile('extension/vendor/library-LICENSES.txt',notices.join('\n\n---\n\n'));
 await writeFile('extension/library-app.css',(await readFile('extension/library-app.css','utf8'))+'\n.library-learning-workspace{padding:0;min-height:100dvh}.library-storage-changed{position:fixed;inset:0 0 auto;z-index:99999;padding:20px;background:#fff4e8;color:#642a18}.library-learning-workspace .learn-root{height:100dvh}\n');
 console.log(`Built shared library (${Object.keys(result.metafile.inputs).length} source files).`);
+await writeFile('extension/library-app.css',(await readFile('extension/library-app.css','utf8'))+'\n.library-load-error{max-width:560px;margin:12vh auto;padding:24px}.library-load-error h1{font-size:22px}.library-load-error p{margin:16px 0;color:#676d67}.library-load-error button{padding:8px 16px;margin-right:20px;border:1px solid #dfe2dc;border-radius:6px}\n');

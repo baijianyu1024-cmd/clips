@@ -21,6 +21,7 @@ function backend() {
 test('legacy draft with no baseline saves a first summary with explicit null and edited text', async () => {
   const b = backend(); const result = await saveCoreDraft(b.cloud, job, '- 我已改写的摘要。');
   assert.equal(result.coreSummary.text, '- 我已改写的摘要。'); assert.equal(result.coreSummary.edited, true);
+  assert.deepEqual(result.coreSummary.images, []);
   assert.equal(b.requests[0].body.expectedCoreSummaryId, null); assert.equal(result.thought, '我的原记录');
 });
 test('a legacy or stale draft cannot replace an existing summary until its current version is reviewed', async () => {

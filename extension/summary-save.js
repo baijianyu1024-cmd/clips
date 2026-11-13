@@ -9,7 +9,7 @@ export async function saveCoreDraft(cloud, job, text) {
   // An omitted legacy baseline may mean no original summary. Only that empty
   // state can be recovered without asking the reader to review an existing one.
   const expected = job.expectedCoreSummaryId ?? null;
-  const summary = { ...job.record, scope: String(job.record.scope || "").slice(0, 160), text, origin: "ai", edited: text !== job.text.trim() };
+  const summary = { ...job.record, images: job.record.images ?? [], scope: String(job.record.scope || "").slice(0, 160), text, origin: "ai", edited: text !== job.text.trim() };
   for (let attempt = 0; attempt < 3; attempt++) {
     const current = (await cloud({})).notes.find(n => n.id === job.noteId);
     if (!current || current.deletedAt || current.archived || current.status === "inbox") throw new Error("请先恢复并开始这篇笔记，摘要草稿仍保留。");

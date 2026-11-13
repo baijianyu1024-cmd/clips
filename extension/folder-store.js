@@ -59,10 +59,18 @@ function blankNote(id, fields) {
     ...fields, id, createdAt:now(), updatedAt:now(), revision:1, starred:false, archived:false, deletedAt:null, reviews:[], coreSummary:null, coreSummaryHistory:[], transcripts:[], nextReviewAt:null };
 }
 function allTags(data) { return [...new Set([...data.tags, ...data.notes.flatMap(n => n.tags || [])])].sort((a,b) => a.localeCompare(b)); }
+// Match the cloud schema's optional summary defaults. Older side-panel AI
+// results omitted these fields; reading them must not rewrite the user's file.
+function summaryDefaults(summary) {
+  return summary ? { images:[], provider:'', model:'', edited:false, ...summary } : null;
+}
+function noteDefaults(note) {
+  return { ...note, coreSummary:summaryDefaults(note.coreSummary), coreSummaryHistory:(note.coreSummaryHistory || []).map(summaryDefaults) };
+}
 function tagsState(data) { return { revision:data.tagRevision || 0, tags:allTags(data).map(name => ({ name, count:data.notes.filter(n => !n.deletedAt && !n.archived && n.status!=='inbox' && n.tags.some(t=>normalize(t)===normalize(name))).length,usageCount:data.notes.filter(n=>n.tags.some(t=>normalize(t)===normalize(name))).length })) }; }
 export function mutateLocalNote(current, body) {
   if (current.revision !== body.revision) conflict();
-  const n = structuredClone(current), action = body.action;
+  const n = noteDefaults(structuredClone(current)), action = body.action;
   if (['edit_metadata','edit_record','remove_image','edit_image_record','edit_review','edit_ai_summary','tag','start_reading','add_clip','add_ai_summary','position','status','add_image'].includes(action)&&(n.deletedAt||n.archived)) throw new Error('请先恢复笔记，再修改。');
   if(n.status==='inbox'&&['add_clip','add_ai_summary','position','add_image'].includes(action))n.status='reading';
   if (action === 'add_clip') { if (!uuid(body.clip?.id)) throw new Error('记录无效。'); if (!n.clips.some(c => c.id === body.clip.id)) { n.clips.push(body.clip); if (body.clip.sourceUrl && !n.sources.some(s=>s.url===body.clip.sourceUrl)) n.sources.push({url:body.clip.sourceUrl,label:body.clip.sourceTitle||''}); } }
@@ -73,7 +81,7 @@ export function mutateLocalNote(current, body) {
   else if (action === 'remove_image') n.images=n.images.filter(i=>i.key!==body.imageKey);
   else if (action === 'remove_record') n.clips = n.clips.filter(c=>c.id!==body.recordId);
   else if (action === 'set_clip_translation') { const clip = n.clips.find(c=>c.id===body.clip?.id); if (!clip) throw new Error('记录不存在。'); if(clip.text!==body.clip.text||clip.sourceUrl!==body.clip.sourceUrl||JSON.stringify(clip.transcriptAnchor)!==JSON.stringify(body.clip.transcriptAnchor)) conflict(); clip.translation = body.clip.translation; }
-  else if (action === 'set_core_summary') { if(n.coreSummary?.id===body.coreSummary.id)return current;if ((n.coreSummary?.id||null)!==(body.expectedCoreSummaryId??null)) conflict(); if (n.coreSummary) n.coreSummaryHistory=[...(n.coreSummaryHistory||[]),n.coreSummary].slice(-20); n.coreSummary=body.coreSummary; }
+  else if (action === 'set_core_summary') { if(n.coreSummary?.id===body.coreSummary.id)return n;if ((n.coreSummary?.id||null)!==(body.expectedCoreSummaryId??null)) conflict(); if (n.coreSummary) n.coreSummaryHistory=[...(n.coreSummaryHistory||[]),n.coreSummary].slice(-20); n.coreSummary=summaryDefaults(body.coreSummary); }
   else if (action === 'add_ai_summary') { if (!n.aiSummaries.some(a=>a.id===body.aiSummary.id)) n.aiSummaries.push(body.aiSummary); }
   else if (action === 'edit_metadata') { const m=body.metadata; for(const key of ['title','kind','status','sources','tags','published','timestamp']) if(key in m) n[key]=m[key]; if(m.title!==current.title&&m.title)n.linkTitleStatus='ready'; }
   else if (action === 'edit') { for(const key of ['title','summary','thought','kind','status','sources','tags','published','timestamp','images']) if(key in body.fields) n[key]=body.fields[key]; }
@@ -116,6 +124,7 @@ export function createFolderRepository(root, id, lock = task => task()) {
     if(!['/api/notes','/api/tags','/api/media','/api/transcripts','/api/learning','/api/materials'].includes(path.split('?')[0]) || !['GET','POST','PATCH'].includes(method)) throw new Error('不支持的资料库请求。');
     return lock(async()=>{
       const old=await load(), data=structuredClone(old), prefix=await sha256(id);
+      data.notes=data.notes.map(noteDefaults);
       if(path.startsWith('/api/learning')){
         const chatId=new URL(path,'https://clips.local').searchParams.get('id');
         if(method==='GET'){

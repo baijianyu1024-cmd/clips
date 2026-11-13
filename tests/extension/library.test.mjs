@@ -8,9 +8,18 @@ import {openFolder,createFolderRepository} from '../../extension/folder-store.js
 test('shared library UI writes actual files: create, records, summary, drafts, tags and reopening',async t=>{
  const interval=globalThis.setInterval;globalThis.setInterval=(...args)=>interval(...args).unref();t.after(()=>{globalThis.setInterval=interval;});
  const disk=await diskFolder(t),target={...await openFolder(disk.root),connection:'session'},repo=createFolderRepository(disk.root,target.id);
+ // 0.15.0 side-panel AI summaries were stored without optional images/edited.
+ // Start from that on-disk format, not only notes created by this UI.
+ const seeded=(await repo.request({method:'POST',body:{id:crypto.randomUUID(),fields:{title:'侧栏 AI 摘要兼容验证'}}})).note;
+ const legacy=JSON.parse(await disk.read('clips.json'));
+ legacy.notes[0].coreSummary={id:crypto.randomUUID(),text:'- 从侧栏保存的纯文字摘要',origin:'ai',scope:'原文与随读记录',provider:'DeepSeek',model:'deepseek-flash',createdAt:seeded.createdAt};
+ legacy.notes[0].coreSummaryHistory=[{...legacy.notes[0].coreSummary,id:crypto.randomUUID(),text:'上一版纯文字摘要'}];
+ await disk.write('clips.json',JSON.stringify(legacy));
  const dom=new JSDOM(await readFile(new URL('../../extension/library.html',import.meta.url),'utf8'),{url:'https://extension.test/library.html',pretendToBeVisual:true});
+ t.after(()=>dom.window.close());
  for(const name of ['window','document','localStorage','sessionStorage','location','history','HTMLElement','HTMLInputElement','HTMLTextAreaElement','HTMLDialogElement','Element','Node','MutationObserver','Event','MouseEvent','getComputedStyle','navigator'])Object.defineProperty(globalThis,name,{configurable:true,value:typeof dom.window[name]==='function'&&name==='getComputedStyle'?dom.window[name].bind(dom.window):dom.window[name]});
  window.confirm=()=>true;window.scrollTo=()=>{};Element.prototype.scrollIntoView=()=>{};
+ globalThis.ResizeObserver=class{observe(){}unobserve(){}disconnect(){}};
  HTMLDialogElement.prototype.showModal=function(){this.open=true;};HTMLDialogElement.prototype.close=function(){this.open=false;};
  globalThis.requestAnimationFrame=window.requestAnimationFrame.bind(window);globalThis.cancelAnimationFrame=window.cancelAnimationFrame.bind(window);
  const cache={clipsStorageTarget:target};globalThis.chrome={runtime:{id:'test',getURL:path=>'https://extension.test/'+path,async sendMessage(m){try{return {ok:true,data:await repo.request(m.request)};}catch(e){return {ok:false,error:e.message,status:e.status};}}},tabs:{query:async()=>[]},storage:{local:{get:async keys=>Object.fromEntries((Array.isArray(keys)?keys:[keys]).map(k=>[k,cache[k]])),set:async values=>Object.assign(cache,values),remove:async keys=>(Array.isArray(keys)?keys:[keys]).forEach(k=>delete cache[k])},onChanged:{addListener(){}}}};
@@ -20,7 +29,7 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  const input=(selector,value)=>{const el=$(selector);assert.ok(el,selector);const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));};
  const submit=selector=>$(selector).dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
  const pause=()=>new Promise(r=>setTimeout(r,40));
- await until(()=>!!$('.new-note'));
+ await until(()=>!!$('.library-record')&&document.body.textContent.includes('从侧栏保存的纯文字摘要'));
  $('.new-note').click();await until(()=>$('dialog.editor-modal'));
  input('.title-input','共享界面验证');await pause();submit('dialog.editor-modal form');await until(()=>!$('dialog.editor-modal'));
  let note=(await repo.request()).notes[0];assert.equal(note.title,'共享界面验证');
