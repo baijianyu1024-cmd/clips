@@ -1,6 +1,6 @@
 {
   "name": "clips-browser-extension",
-  "version": "0.15.1",
+  "version": "0.15.2",
   "private": true,
   "description": "Local-folder reading notes, screenshots and contextual AI for Chrome.",
   "license": "MIT",

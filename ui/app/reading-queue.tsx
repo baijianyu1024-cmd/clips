@@ -3,7 +3,7 @@ import {request as fetchRequest} from "./client-runtime";
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, BookOpen, Check, Link2, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { titleOf, type Note } from "./model";
-import { linkKey } from "@/lib/links";
+import { sourceUrl } from "@/lib/links";
 import { needsLinkTitle, titleUrlKey } from '@/extension/link-metadata.js';
 import { browserQueueTitles } from './queue-titles';
 import "./reading-queue.css";
@@ -69,7 +69,7 @@ export default function ReadingQueue({ notes, loading, busy, onChange, onRefresh
   }, []);
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    const normalized = linkKey(url);
+    const normalized = sourceUrl(url);
     if (!normalized) { setError("粘贴一个完整的 http:// 或 https:// 链接就好。"); return; }
     setSaving(true); setError(""); setMessage("");
     if (pendingSave.current.url !== normalized) pendingSave.current = { url: normalized, id: crypto.randomUUID() };

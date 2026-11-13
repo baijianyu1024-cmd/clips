@@ -62,5 +62,5 @@ test('starting a manually opened queued source removes its duplicate without alt
  const {repo}=await setup(t);const url='https://example.com/article';await repo.request({method:'POST',body:{action:'save_link',id:crypto.randomUUID(),url}});
  await repo.request({method:'POST',body:{action:'save_link',id:crypto.randomUUID(),url:'https://example.com/other'}});
  await repo.request({method:'POST',body:{id:crypto.randomUUID(),fields:createFields({url,title:'文章'})}});
- const all=(await repo.request()).notes;assert.equal(all.filter(n=>n.sources[0].url===url).length,1);assert.equal(all.filter(n=>n.status==='inbox').length,1);
+ const all=(await repo.request()).notes;assert.equal(all.filter(n=>!n.deletedAt&&n.sources[0].url===url).length,1);assert.equal(all.filter(n=>!n.deletedAt&&n.status==='inbox').length,1);assert.equal(all.filter(n=>n.deletedAt&&n.sources[0].url===url).length,1);
 });

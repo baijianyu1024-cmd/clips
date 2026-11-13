@@ -1,22 +1,31 @@
 import { youtubeId, youtubeUrl } from './youtube.js';
 
-// Metadata matching is intentionally separate from note deduplication.
-export function titleUrlKey(raw) {
+// Keep navigable links intact; strip only known tracking parameters.
+export function normalizeSourceUrl(raw) {
   try {
     const u = new URL(raw);
     if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password) return '';
     const video = youtubeId(raw); if (video) return youtubeUrl(video);
     u.hash = '';
+    for (const k of [...u.searchParams.keys()]) if (/^(utm_.*|fbclid|gclid|scene|spm_id_from|vd_source)$/i.test(k) || ((u.hostname === 'mp.weixin.qq.com' || /(^|\.)(feishu\.cn|larksuite\.com|larksuite\.cn)$/.test(u.hostname)) && /^(from|isappinstalled|mpshare|sharer_shareinfo|sharer_shareinfo_first|srcid|login_redirect_times)$/i.test(k))) u.searchParams.delete(k);
+    u.searchParams.sort(); return u.href;
+  } catch { return ''; }
+}
+
+// Identity is separate from the saved URL: WeChat signatures stay in links.
+export function sourceUrlKey(raw) {
+  try {
+    const normalized = normalizeSourceUrl(raw); if (!normalized) return '';
+    const u = new URL(normalized);
     if (u.hostname === 'mp.weixin.qq.com' && u.pathname === '/s' && u.searchParams.has('__biz') && u.searchParams.has('mid') && u.searchParams.has('idx')) {
       const params = new URLSearchParams();
       for (const k of ['__biz', 'mid', 'idx']) params.set(k, u.searchParams.get(k));
       u.search = params.toString();
-    } else {
-      for (const k of [...u.searchParams.keys()]) if (/^(utm_.*|fbclid|gclid)$/i.test(k) || ((u.hostname === 'mp.weixin.qq.com' || /(^|\.)(feishu\.cn|larksuite\.com|larksuite\.cn)$/.test(u.hostname)) && /^(scene|from|isappinstalled|mpshare|sharer_shareinfo|sharer_shareinfo_first|srcid|login_redirect_times)$/i.test(k))) u.searchParams.delete(k);
     }
     u.searchParams.sort(); return u.href;
   } catch { return ''; }
 }
+export const titleUrlKey = sourceUrlKey;
 
 export function cleanPageTitle(raw, url = '') {
   if (typeof raw !== 'string') return '';

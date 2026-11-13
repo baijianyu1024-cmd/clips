@@ -16,6 +16,7 @@ import ReadingQueue from "./reading-queue";
 import { ReflectionForm } from "./reflection-form";
 import "./library.css";
 import { linkKey } from "@/lib/links";
+import { queueDuplicates } from "@/extension/queue-links.js";
 import { quoteView } from "@/extension/quote-context.js";
 import { blankFields, noteSchema, fieldsSchema, imageSchema, metadataSchema, kinds, titleOf, toMarkdown, type Fields, type Kind, type Note } from "./model";
 import TagPicker from "./tag-picker";
@@ -73,7 +74,7 @@ export default function Notebook() {
   const [writeNote, setWriteNote] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const refresh = useCallback(async () => {
-    try { const data = await api(); setTagState(data.tagState); setNotes(current => data.notes.map(note => current.find(n => n.id === note.id && n.revision > note.revision) || note)); setError(""); }
+    try { let data = await api(); if (queueDuplicates(data.notes).length) data = await api({ action: "reconcile_queue" }, "POST"); setTagState(data.tagState); setNotes(current => data.notes.map(note => current.find(n => n.id === note.id && n.revision > note.revision) || note)); setError(""); }
     catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
   }, []);

@@ -66,6 +66,7 @@
     "panel.html",
     "preview.css",
     "preview.js",
+    "queue-links.js",
     "queue-title-sync.js",
     "quick-quote.js",
     "quote-context.js",
@@ -108,7 +109,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "core.js": {
-      "reference": "046e3d9eca62fa54d67e33ace9a59cc1b7d483ef448808a2f257c03e5c48f5e7",
+      "reference": "b2db68d2555a68dd08309b7441e852150d8441c07afed6b035afcce501486e5a",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "background.js": {
@@ -136,7 +137,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "manifest.json": {
-      "reference": "c17e1ab893dc102c9ffe609e0761b470a226b3c0f73af4efc17a40abbceb5306",
+      "reference": "bedbab25d8b01eb2e7142fd08991e6bb4a076387884e23049b60e8ac0ef1b25c",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.js": {
@@ -155,10 +156,10 @@
     "ui/app/markdown.tsx": "93e69f9f5dc8bed2637fbfbb589ebd876d51fce3ba2f43b4c0241a8928c74aca",
     "ui/app/model.ts": "333d6793abf638d46dc8cca6eab40f16bdde24b6ef2ee74d3b04507a93a4b9db",
     "ui/app/note-content.css": "d15560bd62b223354422c12e9b02bbe620a5ebf1d03c6ace75000ea9af16c3a9",
-    "ui/app/notebook.tsx": "3b14e67baf9707d1caed7736697a8929fbd902ad45ee34320cded76ca6e4c094",
+    "ui/app/notebook.tsx": "7400ad2be99661e0bfb71168e2aa4f47f75a53776eab284eda6adff23bfc3af7",
     "ui/app/queue-titles.ts": "3e35aea809045ca1b4837de4faaac17c3a89d1b7fab87f8551b0eabc8aa5ad80",
     "ui/app/reading-queue.css": "4b51a3de9dbdd818d4cde86dea89e022cc3698383521309dc5f5a16822b1f930",
-    "ui/app/reading-queue.tsx": "79d3c940af4e23b8aa2873d32692c7e11bf2375c2a03cef6f2ac1844a8abc725",
+    "ui/app/reading-queue.tsx": "43b8186a1bec76227925a373fa80ed0c7e75cea7c06146f700b3c9e40e5f8864",
     "ui/app/reading-timeline.tsx": "5f24426fccb3719a83a7ca38c7be273d62dce218da9432e0c073f22baac6a373",
     "ui/app/reflection-form.tsx": "16315203141ee057fbf19035cd274ddbc78756db31bf3117aee5752605bfe549",
     "ui/app/review-history.tsx": "3f14c32225e5746a5a7329c74e6f0cb8a1286927f0df7951ad7df8f03cba0fdc",
@@ -172,7 +173,7 @@
     "ui/app/tag-picker.tsx": "288acc0f0792180f28454860c6f72152811427c735d7b0e4dc814d7329aa4f59",
     "ui/app/transcript-reader.css": "720411a87235d75d29684afe1e904387b23d09b34a653eb845300f6d0ffca834",
     "ui/app/transcript-reader.tsx": "58c6e6a5d43f9847af19699c04568b93a73b987d76f5ddfed23ba4c0c2b1ecca",
-    "ui/lib/links.ts": "c3106825cbfe8dcb25fa1f8b6411e8541c52341491c7353791fe6df211bfa7ec",
+    "ui/lib/links.ts": "3e58887544a991af0bb77e9554d1931db3b8b0c1b9185f6c1c50c958f63fb15f",
     "ui/lib/reader/import.ts": "0ab671dc8e80140c39a0c8e19108a5581cb936251913c11e82b5877c0e7a8682",
     "ui/lib/reader/model.ts": "d3b9355d4b9a030093cf394a499f04861e9f828c1552529b13a3a20159cd6d24",
     "ui/lib/reader/source.ts": "02a100b3bcd53bfa9cb786ad19022ad564b30ba5278b9cb06b79efb24fc0d414",
@@ -190,10 +191,10 @@
     "extension/transcript-assistant.js": "f7b2f322caa78714d2c5b3b0c522b6aae403f411c78919418dc4fdbdbdc225e0",
     "extension/transcript-ai.js": "a0ac8be7ad2491040d246f8de177e8e0d3fe679e3431831ac25a3237ee7455ba",
     "extension/storage.html": "96ecd3d83db0b03fd290bb687194a9a0ca7d104e34dc7030b37559757f38b1d5",
-    "extension/link-metadata.js": "da605dc8a074021e40a0d71c4734aa597ce41ad131ca3124a1340795162ce063",
+    "extension/link-metadata.js": "c2729bd147d56e8d9ada5273da200e7a88e9c257ea95c28d6253c67e4daa9f4b",
     "extension/youtube-entry.js": "617b5b8cbe005a347bdd26bf565221bc767aa46f125fc93284da89f30a229f3c",
     "extension/learning-engine.js": "649d1f0345c06412aca4e2a57a34851f77a083d8099514657e671fa80f8f99d6",
-    "extension/core.js": "b9020c6aec3ffc4a9777d5ce6e1535bdb4bf0d7376f90377a39bd7b60eeb1f69",
+    "extension/core.js": "84d7cfe2878cd1c02ae0083ebe7c575fa0964e36f111cba7c1683beedd78f760",
     "extension/background.js": "a83b673720b02557d18c21b57d8fe30616b1a7153c78d623333c07ea1d4ade4a",
     "extension/queue-title-sync.js": "22e0c268a2e7d84cbd8e5e654e80ece69ed6fa637ba106ebc3d1cd998a098edf",
     "extension/library-entry.jsx": "c93a1fea2f8e14e52b32e122643ea09ae6ab4d5a10258bc284b8129ae4161d5c",
@@ -217,14 +218,14 @@
     "extension/transcript-panel.js": "0357f52dddf416dae4dd8a496ca5265e2365c4d93ecdeb5a71f89be95e02a582",
     "extension/summary-save.js": "de7d2df2b4ddbfd6461f88265d94c0a85823f253f9a1de951f30ca74ec9339ec",
     "extension/ai-stream.js": "6b6d281cb1b56510ba5f3a43a3d3515f7303bc3dfb0fed2d251ffcfd25685cc3",
-    "extension/folder-store.js": "174f7a1f73f7c0e2bd01c3bea0602177e921960d3de805b43b837ab6cbb95437",
+    "extension/folder-store.js": "f8daf16f6b35cf7f8853e911736f2de057c347ef31f5c137004e918808e57b44",
     "extension/quick-quote.js": "b55d0bebd6c9f3b3d93f18ba68ebe76b57e967619fb58b301d979686a8d2381f",
     "extension/storage-target.js": "cdf5e9778b829c8d783fe0b4bfa6fce1bca341a6ac46377c83da5fe4adff66fd",
     "extension/THIRD_PARTY_NOTICES.txt": "bdd7dccb73386edcce4d0c5318af9a305b789a6c18883aed4fd5c236acf4fde8",
     "extension/page-content.js": "600639e20645ca8fbb757cab1553d5da7fd9c9c598ce2549d16d8901784540af",
-    "extension/panel.html": "91fb85e3462ce190166d751cf026772c04bc11e3290fe87941e3f41f5261a9cc",
+    "extension/panel.html": "e4e6fb3551f1724597b866a1f272b9191aac60d34f233fc6f65ced30d58356c6",
     "extension/learning-ui.js": "6c9e48b5fe6b7f96ca04f2e1311bbce86e83c4600ed02b5ac29345c260e81476",
-    "extension/manifest.json": "24256b51348c3d1dbeb4125101d21a282cac5d354a910a8058afd76ef04346fc",
+    "extension/manifest.json": "131257272d41a750f80666917646e16d938d4d4831da3ed6149924d928c038e7",
     "extension/stream-request.js": "e320b5fb39fda800ce9df347a6812c7be60af2807baddd3baa57cafd2da2d26a",
     "extension/transcript-service.js": "1c080ea56fd355c4b05ff3ff29dce3eb41b68fa0ed2ae4c675ed3100d9e2bed4",
     "extension/visual-material.js": "58d54cc2b7b01771c8aaeee8298e13d2facee2d3d010f2a6c099169f9aab53e0",
@@ -244,6 +245,7 @@
     "extension/vendor/rich-editor.mjs": "1789298da2f970565776ff6c806db4185a9c2fb16752d9d8883fec64e858c5ad",
     "extension/vendor/rich-editor-LICENSES.txt": "569cd2564231dc1041f209f5c10fdab3bd03d98b9b3afaa7f729cb536908bf4a",
     "extension/vendor/markdown-it.mjs": "d5432491790141da046b1197353705db03264f40b5727f3b4b591f5aba193e30",
-    "extension/vendor/markdown-it-LICENSE.txt": "792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473"
+    "extension/vendor/markdown-it-LICENSE.txt": "792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473",
+    "extension/queue-links.js": "ff08f0782e8796cea59c856c7fab940db363c9021a315c896c38505d6b4f3099"
   }
 }

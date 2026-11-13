@@ -1,19 +1,11 @@
 import { SUMMARY_STYLE } from "./summary-policy.js";
 import { youtubeId, youtubeUrl } from "./youtube.js";
+import { normalizeSourceUrl, sourceUrlKey } from "./link-metadata.js";
+export const SITE = "";
 export const MAX_INPUT = 40000;
 export const emptyState = () => ({ activeNoteId: null, drafts: {}, aiDrafts: {}, pendingCreates: {} });
-export function canonical(url) {
-  try {
-    const u = new URL(url);
-    if (!["http:", "https:"].includes(u.protocol) || u.username || u.password) return "";
-    const video = youtubeId(url); if (video) return youtubeUrl(video);
-    u.hash = "";
-    for (const k of [...u.searchParams.keys()]) if (/^(utm_|fbclid$|gclid$|scene$|spm_id_from$|vd_source$)/i.test(k)) u.searchParams.delete(k);
-    u.searchParams.sort();
-    return u.href;
-  } catch { return ""; }
-}
-export const matches = (note, url) => !!canonical(url) && note.sources.some(s => canonical(s.url) === canonical(url));
+export const canonical = normalizeSourceUrl;
+export const matches = (note, url) => !!sourceUrlKey(url) && note.sources.some(s => sourceUrlKey(s.url) === sourceUrlKey(url));
 export const findNote = (notes, url) => notes.filter(n => !n.deletedAt && !n.archived && matches(n, url)).sort((a, b) => Number(a.status === "inbox") - Number(b.status === "inbox") || (a.createdAt || "").localeCompare(b.createdAt || "") || a.id.localeCompare(b.id))[0];
 // Only called by an explicit Start action, never by tab navigation.
 export async function startPageNote(adapter, page) {

@@ -1,3 +1,5 @@
+import { findNote } from './core.js';
+import { retireQueueDuplicates } from './queue-links.js';
 import { canonical, createFields } from './core.js';
 import { titleUrlKey, cleanPageTitle } from './link-metadata.js';
 import { quoteRangeKey, anchoredTranscriptText } from './quote-context.js';
@@ -221,6 +223,11 @@ export function createFolderRepository(root, id, lock = task => task()) {
       if(path!=='/api/notes') throw new Error('不支持的资料库请求。');
       if(method==='GET') return {notes:data.notes,tagState:tagsState(data)};
       if(method==='POST') {
+        if(body.action==='reconcile_queue') {
+          const reconciled=retireQueueDuplicates(data.notes);
+          if(reconciled.some((n,i)=>n!==data.notes[i])) { data.notes=reconciled; await commit(data,old); }
+          return {notes:data.notes,tagState:tagsState(data)};
+        }
         if(body.action==='resolve_title') {
           const n=data.notes.find(n=>n.id===body.id); if(!n) throw new Error('笔记不存在。');
           if(n.status!=='inbox'||n.linkTitleStatus==='ready')return {note:n};
@@ -229,7 +236,7 @@ export function createFolderRepository(root, id, lock = task => task()) {
         }
         if(body.action==='save_link') {
           const url=canonical(body.url); if(!url) throw new Error('请输入 http:// 或 https:// 链接。');
-          const found=data.notes.find(n=>!n.deletedAt&&n.sources.some(s=>titleUrlKey(s.url)===titleUrlKey(url)));
+          const found=findNote(data.notes,url);
           if(found) return {note:found,existing:true};
           const note=blankNote(body.id,{...createFields({url,title:new URL(url).hostname}),status:'inbox',linkTitleStatus:'unavailable'}); data.notes.unshift(note); await commit(data,old); return {note};
         }
@@ -245,12 +252,13 @@ export function createFolderRepository(root, id, lock = task => task()) {
         if(body.action) throw new Error('不支持这个笔记操作。');
         const found=data.notes.find(n=>n.id===body.id); if(found) return {note:found};
         const note=blankNote(body.id,body.fields);
-        if(note.status!=='inbox') data.notes=data.notes.filter(n=>n.status!=='inbox'||!n.sources.some(s=>note.sources.some(t=>titleUrlKey(t.url)===titleUrlKey(s.url))));
-        data.notes.unshift(note); await commit(data,old); return {note};
+        data.notes.unshift(note);
+        if(note.status!=='inbox') data.notes=retireQueueDuplicates(data.notes); await commit(data,old); return {note};
       }
       if(method!=='PATCH') throw new Error('不支持的保存方式。');
       const index=data.notes.findIndex(n=>n.id===body.id); if(index<0) throw new Error('笔记不存在。');
       const note=mutateLocalNote(data.notes[index],body); data.notes[index]=note;
+      if(!note.deletedAt&&!note.archived&&note.status!=="inbox") data.notes=retireQueueDuplicates(data.notes);
       await commit(data,old); return {note};
     });
   }

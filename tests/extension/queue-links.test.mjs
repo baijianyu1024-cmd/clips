@@ -1,0 +1,66 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { canonical, findNote, startPageNote, createFields } from '../../extension/core.js';
+import { sourceUrlKey } from '../../extension/link-metadata.js';
+import { queueDuplicates, retireQueueDuplicates } from '../../extension/queue-links.js';
+import { openFolder, createFolderRepository } from '../../extension/folder-store.js';
+import { diskFolder } from './folder-fixture.mjs';
+const url='https://my.feishu.cn/wiki/documentA';
+const note=(id,status,link=url,extras={})=>({...createFields({url:link,title:'同名文档'}),id,status,revision:2,createdAt:'2026-11-01T00:00:00Z',deletedAt:null,archived:false,...extras});
+test('Feishu parent links reuse the queued note and its metadata when opened directly',async()=>{
+ const queued=note('queued','inbox',url+'?from=from_parent_docx#block',{tags:['已有标签'],published:'2026.10'});
+ let created=false;
+ const result=await startPageNote({cloud:async r=>{if(!r.method)return {notes:[queued]};if(r.method==='POST')created=true;assert.equal(r.body.id,queued.id);return {note:{...queued,status:'reading'}};}},{url,title:'文档'});
+ assert.equal(created,false);assert.equal(result.id,queued.id);assert.deepEqual(result.tags,['已有标签']);assert.equal(result.published,'2026.10');
+});
+test('only confirmed identities match; meaningful parameters, tenants and different articles remain distinct',()=>{
+ assert.equal(sourceUrlKey(url+'?from=from_parent_docx&login_redirect_times=2'),sourceUrlKey(url));
+ assert.notEqual(sourceUrlKey(url),sourceUrlKey(url.replace('my.','team.')));
+ assert.notEqual(sourceUrlKey(url),sourceUrlKey(url.replace('documentA','documentB')));
+ for(const host of ['example.com','feishu.cn.example.com'])assert.notEqual(sourceUrlKey('https://'+host+'/doc?from=a'),sourceUrlKey('https://'+host+'/doc?from=b'));
+ assert.notEqual(sourceUrlKey('https://example.com/video?p=1'),sourceUrlKey('https://example.com/video?p=2'));
+ const wx='https://mp.weixin.qq.com/s?__biz=abc&mid=12&idx=1&sn=signed&chksm=hash&mpshare=1';
+ assert.equal(sourceUrlKey(wx),sourceUrlKey('https://mp.weixin.qq.com/s?idx=1&mid=12&__biz=abc'));
+ assert.match(canonical(wx),/sn=signed/);assert.match(canonical(wx),/chksm=hash/);
+ assert.notEqual(sourceUrlKey(wx),sourceUrlKey(wx.replace('idx=1','idx=2')));
+ assert.equal(findNote([note('wrong','read',url.replace('documentA','documentB'))],url),undefined);
+});
+test('reconciliation is recoverable, idempotent, and never removes active notes or uncovered sources',()=>{
+ const queued=note('queue','inbox',url+'?from=from_parent_docx',{thought:'保留想法',clips:[{id:'clip',text:'原文'}],images:[{key:'image'}]});
+ const active=note('read','read'),multi=note('multi','inbox',url,{sources:[{url},{url:url+'/other'}]});
+ const invalid=note('invalid','inbox',url,{sources:[{url},{url:'invalid'}]});
+ const all=[queued,active,multi,invalid,note('no-source','inbox',url,{sources:[]})];
+ assert.deepEqual(queueDuplicates(all).map(n=>n.id),['queue']);
+ const retired=retireQueueDuplicates(all,'2026-11-13T00:00:00Z');
+ assert.equal(retired[0].thought,queued.thought);assert.deepEqual(retired[0].clips,queued.clips);assert.deepEqual(retired[0].images,queued.images);assert.equal(retired[0].revision,3);
+ assert.equal(retired[1],active);assert.equal(queued.deletedAt,null);assert.deepEqual(queueDuplicates(retired),[]);
+ assert.deepEqual(queueDuplicates([queued,{...active,deletedAt:'deleted'}]),[]);
+ assert.deepEqual(queueDuplicates([queued,{...active,archived:true}]),[]);
+});
+test('local queue lifecycle promotes on direct Start and retires historical duplicates without deleting data',async t=>{
+ const disk=await diskFolder(t),target=await openFolder(disk.root),repo=createFolderRepository(disk.root,target.id,fn=>fn());
+ let q=(await repo.request({method:'POST',body:{action:'save_link',id:crypto.randomUUID(),url:url+'?from=from_parent_docx'}})).note;
+ q=(await repo.request({method:'PATCH',body:{id:q.id,revision:q.revision,action:'tag',tag:'保留标签',selected:true}})).note;
+ const started=await startPageNote({cloud:r=>repo.request(r)},{url,title:'直接打开'});
+ assert.equal(started.id,q.id);assert.equal(started.status,'reading');assert.deepEqual(started.tags,['保留标签']);
+ const existing=await repo.request({method:'POST',body:{action:'save_link',id:crypto.randomUUID(),url:url+'?from=share'}});
+ assert.equal(existing.note.id,q.id);assert.equal(existing.existing,true);
+ const historical=note(crypto.randomUUID(),'inbox',url+'?from=from_parent_docx',{thought:'旧记录保留',clips:[]});
+ await repo.request({method:'POST',body:{action:'import',backup:{version:1,notes:[historical]}}});
+ const reconciled=await repo.request({method:'POST',body:{action:'reconcile_queue'}});
+ const retired=reconciled.notes.find(n=>n.id===historical.id);assert.ok(retired.deletedAt);assert.equal(retired.thought,'旧记录保留');
+ const before=await disk.read('clips.json');await repo.request({method:'POST',body:{action:'reconcile_queue'}});assert.equal(await disk.read('clips.json'),before);
+ const stored=JSON.parse(await disk.read('clips.json'));assert.equal(stored.notes.length,2);
+});
+test('local creation and metadata/status changes reconcile duplicates, preserving multi-source queues',async t=>{
+ const disk=await diskFolder(t),target=await openFolder(disk.root),repo=createFolderRepository(disk.root,target.id,fn=>fn());
+ const q=note(crypto.randomUUID(),'inbox',url+'?from=parent',{thought:'原有信息'});
+ const multi=note(crypto.randomUUID(),'inbox',url,{sources:[{url},{url:url+'/extra'}]});
+ await repo.request({method:'POST',body:{action:'import',backup:{version:1,notes:[q,multi]}}});
+ const active=(await repo.request({method:'POST',body:{id:crypto.randomUUID(),fields:createFields({url,title:'新笔记'})}})).note;
+ let all=(await repo.request({})).notes;assert.ok(all.find(n=>n.id===q.id).deletedAt);assert.equal(all.find(n=>n.id===q.id).thought,'原有信息');assert.equal(all.find(n=>n.id===multi.id).deletedAt,null);
+ const q2=note(crypto.randomUUID(),'inbox',url);
+ await repo.request({method:'POST',body:{action:'import',backup:{version:1,notes:[q2]}}});
+ await repo.request({method:'PATCH',body:{id:active.id,revision:active.revision,action:'status',status:'read'}});
+ all=(await repo.request({})).notes;assert.ok(all.find(n=>n.id===q2.id).deletedAt);assert.equal(all.find(n=>n.id===active.id).status,'read');
+});
