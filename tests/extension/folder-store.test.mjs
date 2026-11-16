@@ -58,6 +58,21 @@ test('foreign media and path traversal cannot be read or attached to a local not
  await assert.rejects(repo.request({method:'PATCH',body:{id:note.id,revision:1,action:'add_clip',clip:{id:crypto.randomUUID(),text:'',thought:'',images:[{key:'a'.repeat(64)+'/'+crypto.randomUUID()+'.png'}]}}}),/不属于/);
  assert.equal((await repo.request()).notes[0].clips.length,0);
 });
+test('switching transcript language activates the new snapshot and keeps old quotations and AI materials recoverable',async t=>{
+ const {repo,note,root,target}=await setup(t),post=transcript=>repo.request({path:'/api/transcripts',method:'POST',body:{noteId:note.id,activate:true,transcript}});
+ const ar={videoId:'SHIYEDEMO01',language:'ar',segments:[{start:0,duration:4,text:'النص الأصلي'}]};
+ const old=(await post(ar)).snapshot;
+ await repo.request({path:'/api/transcripts',method:'POST',body:{action:'save_assist',noteId:note.id,snapshotId:old.id,assist:{kind:'translation',model:'test',segments:[{index:0,text:'原先的中文译文'}]}}});
+ const current=(await repo.request()).notes.find(n=>n.id===note.id);
+ const clip={id:crypto.randomUUID(),text:'النص الأصلي',thought:'保留我的想法',sourceUrl:page.url,videoTime:0,transcriptAnchor:{snapshotId:old.id,from:0,to:0},createdAt:new Date().toISOString()};
+ await repo.request({method:'PATCH',body:{id:note.id,revision:current.revision,action:'add_clip',clip}});
+ const en={...ar,language:'en',selectionVersion:1,availableLanguages:['ar','en'],segments:[{start:0,duration:4,text:'Original English.'}]};
+ const changed=await post(en);assert.equal(changed.note.transcripts[0].language,'en');assert.equal(changed.note.transcripts.length,2);assert.equal(changed.note.clips[0].transcriptAnchor.snapshotId,old.id);
+ const restored=await post(ar);assert.equal(restored.note.transcripts[0].id,old.id);assert.equal(restored.assist.translations[0].text,'原先的中文译文');
+ const final=await post(en),again=await post(en);assert.equal(again.note.revision,final.note.revision);
+ const reopened=await createFolderRepository(root,target.id).request();assert.equal(reopened.notes[0].transcripts[0].language,'en');assert.equal(reopened.notes[0].clips[0].thought,'保留我的想法');
+ assert.equal((await repo.request({path:`/api/transcripts?note=${note.id}&id=${old.id}`})).assist.translations[0].text,'原先的中文译文');
+});
 test('starting a manually opened queued source removes its duplicate without altering other queued sources',async t=>{
  const {repo}=await setup(t);const url='https://example.com/article';await repo.request({method:'POST',body:{action:'save_link',id:crypto.randomUUID(),url}});
  await repo.request({method:'POST',body:{action:'save_link',id:crypto.randomUUID(),url:'https://example.com/other'}});

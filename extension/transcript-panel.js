@@ -1,12 +1,12 @@
 import { renderMarkdown } from "./markdown.js";
 import { adapter, native } from "./adapter.js";
-import { youtubeId, youtubeUrl, transcriptText, currentSegmentIndex, currentChapterIndex, overviewQuoteIndices, overviewClip } from "./youtube.js";
+import { youtubeId, youtubeUrl, transcriptText, currentSegmentIndex, currentChapterIndex, overviewQuoteIndices, overviewClip, captionLanguage, captionLanguageName, sameCaptionLanguage } from "./youtube.js";
 import { timeLabel } from "./core.js";
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export function createTranscriptPanel({ active, upsert, notice, quote, addOverview }) {
   const root = document.querySelector("#youtube-reading");
   let targetNote = "", videoId = "", snapshot = null, query = "", page = 0, selected = null, tab = "transcript", mode = "original", assist = { overview: null, translations: {} }, job = null, terminalSeen = "";
-  let following = true, currentIndex = -1, playbackState = { available: false, reason: "waiting" }, ticking = false, quoteAttempted = false, playbackEpoch = 0;
+  let following = true, currentIndex = -1, playbackState = { available: false, reason: "waiting" }, ticking = false, quoteAttempted = false, playbackEpoch = 0, language = "auto", loading = false, loadEpoch = 0;
   function sources(note) { return [...new Map((note?.sources || []).filter(s => youtubeId(s.url)).map(s => [youtubeId(s.url), s])).entries()]; }
   function rows() { return snapshot.segments.map((s, i) => ({ ...s, i })).filter(s => `${mode !== "zh" ? s.text : ""} ${mode !== "original" ? assist.translations[s.i]?.text || "" : ""}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())); }
   function render() {
@@ -15,10 +15,15 @@ export function createTranscriptPanel({ active, upsert, notice, quote, addOvervi
     if (!videos.length) { targetNote = ""; snapshot = null; return; }
     if (targetNote !== note.id || !videos.some(([id]) => id === videoId)) { targetNote = note.id; videoId = videos[0][0]; reset(); }
     const saved = note.transcripts?.find(t => t.videoId === videoId);
-    root.innerHTML = `<div class="transcript-heading"><h2>YouTube 阅读</h2><span>${snapshot ? esc(snapshot.language) + " · " + snapshot.segments.length + " 段" : saved ? "已存入笔记" : "原生字幕"}</span></div>${videos.length > 1 ? `<label class="hint">这篇笔记的视频来源<select id="transcript-video">${videos.map(([id, s]) => `<option value="${esc(id)}" ${id === videoId ? "selected" : ""}>${esc(s.label || id)}</option>`).join("")}</select></label>` : ""}${snapshot ? `<p class="hint">${native ? "字幕与阅读资料保存在笔记库。" : "交互示例 · 字幕、概览、译文均为示例内容。"}</p><div class="yt-tabs" role="tablist" aria-label="视频阅读内容"><button role="tab" aria-selected="${tab === "overview"}" data-action="yt-overview-tab">Overview · 概览</button><button role="tab" aria-selected="${tab === "transcript"}" data-action="yt-transcript-tab">字幕</button></div><div id="yt-connection" class="yt-connection"></div><div id="yt-job" class="hint" role="status"></div><div id="yt-overview" ${tab === "overview" ? "" : "hidden"}></div><div id="yt-transcript" ${tab === "transcript" ? "" : "hidden"}><div class="yt-modes" aria-label="字幕显示方式">${[["original", "原文"], ["bilingual", "双语"], ["zh", "中文"]].map(([value,label]) => `<button aria-pressed="${mode === value}" data-action="yt-mode" data-mode="${value}">${label}</button>`).join("")}</div><div class="transcript-controls"><input id="transcript-search" type="search" aria-label="搜索字幕" placeholder="搜索${mode === "original" ? "原文" : mode === "zh" ? "译文" : "原文或译文"}…" value="${esc(query)}"><button class="quiet" data-action="yt-selection">摘录选中文字</button></div><div id="yt-translate-actions"></div><div id="yt-follow" class="yt-follow"></div><div id="transcript-rows" class="transcript-rows" tabindex="0" aria-label="字幕列表"></div><div id="transcript-pagination" class="transcript-pagination"></div></div>` : `<p class="hint">${saved ? "打开已保存的字幕，不会再次调用 Supadata。" : "主动读取原生字幕，保存后可以随时回顾。"}</p><button class="page-action" data-action="yt-load">${saved ? "打开已保存字幕" : "读取并保存字幕"}<span>↗</span></button>`}`;
+    root.innerHTML = `<div class="transcript-heading"><h2>YouTube 阅读</h2><span>${snapshot ? esc(captionLanguageName(snapshot.language)) + " · " + snapshot.segments.length + " 段" : saved ? "已存入笔记" : "原生字幕"}</span></div>${videos.length > 1 ? `<label class="hint">这篇笔记的视频来源<select id="transcript-video">${videos.map(([id, s]) => `<option value="${esc(id)}" ${id === videoId ? "selected" : ""}>${esc(s.label || id)}</option>`).join("")}</select></label>` : ""}${snapshot ? `${languageControls()}<p class="hint">${native ? "字幕与阅读资料保存在笔记库。" : "交互示例 · 字幕、概览、译文均为示例内容。"}</p><div class="yt-tabs" role="tablist" aria-label="视频阅读内容"><button role="tab" aria-selected="${tab === "overview"}" data-action="yt-overview-tab">Overview · 概览</button><button role="tab" aria-selected="${tab === "transcript"}" data-action="yt-transcript-tab">字幕</button></div><div id="yt-connection" class="yt-connection"></div><div id="yt-job" class="hint" role="status"></div><div id="yt-overview" ${tab === "overview" ? "" : "hidden"}></div><div id="yt-transcript" ${tab === "transcript" ? "" : "hidden"}><div class="yt-modes" aria-label="字幕显示方式">${[["original", "原文"], ["bilingual", "双语"], ["zh", "中文"]].map(([value,label]) => `<button aria-pressed="${mode === value}" data-action="yt-mode" data-mode="${value}">${label}</button>`).join("")}</div><div class="transcript-controls"><input id="transcript-search" type="search" aria-label="搜索字幕" placeholder="搜索${mode === "original" ? "原文" : mode === "zh" ? "译文" : "原文或译文"}…" value="${esc(query)}"><button class="quiet" data-action="yt-selection">摘录选中文字</button></div><div id="yt-translate-actions"></div><div id="yt-follow" class="yt-follow"></div><div id="transcript-rows" class="transcript-rows" tabindex="0" aria-label="字幕列表"></div><div id="transcript-pagination" class="transcript-pagination"></div></div>` : `<p class="hint">${saved ? "打开已保存的字幕，不会再次调用 Supadata。" : "主动读取原生字幕，保存后可以随时回顾。"}</p><button class="page-action" data-action="yt-load">${saved ? "打开已保存字幕" : "读取并保存字幕"}<span>↗</span></button>`}`;
+    if (!snapshot) root.querySelector('[data-action="yt-load"]')?.insertAdjacentHTML("beforebegin", languageControls());
     if (snapshot) { renderOverview(); renderRows(); renderJob(); renderPlayback(); if (!following) root.querySelector("#transcript-rows").scrollTop = oldScroll; }
   }
-  function reset() { playbackEpoch++; following = true; currentIndex = -1; quoteAttempted = false; playbackState = { available: false, reason: "waiting" }; snapshot = null; query = ""; page = 0; selected = null; tab = "transcript"; mode = "original"; assist = { overview: null, translations: {} }; job = null; terminalSeen = ""; }
+  function languageControls() {
+    const languages = [...new Set(["en", "zh", snapshot?.language, ...(snapshot?.availableLanguages || []), ...(active()?.transcripts || []).filter(t => t.videoId === videoId).map(t => t.language)].map(captionLanguage).filter(Boolean))];
+    return `<div class="yt-language"><label>字幕语言<select id="transcript-language" aria-label="字幕语言" ${loading ? "disabled" : ""}><option value="auto" ${language === "auto" ? "selected" : ""}>自动 · 优先原声</option>${languages.map(l => `<option value="${esc(l)}" ${language === l ? "selected" : ""}>${esc(captionLanguageName(l))}</option>`).join("")}</select></label>${snapshot ? `<button class="quiet" data-action="yt-reload" ${loading ? "disabled" : ""}>${loading ? "正在获取…" : "重新获取"}</button>` : ""}</div>${snapshot && !snapshot.selectionVersion && !/^(en|zh)(-|$)/i.test(snapshot.language) ? '<p class="hint">旧字幕未核对语言，可选择英语或自动后重新获取。</p>' : ""}`;
+  }
+  function reset() { playbackEpoch++; loadEpoch++; loading = false; language = "auto"; following = true; currentIndex = -1; quoteAttempted = false; playbackState = { available: false, reason: "waiting" }; snapshot = null; query = ""; page = 0; selected = null; tab = "transcript"; mode = "original"; assist = { overview: null, translations: {} }; job = null; terminalSeen = ""; }
   function renderOverview() {
     const overview = assist.overview, added = overview && active()?.clips.some(c => c.id === overview.id);
     const missingQuotes = overviewQuoteIndices(overview).some(i => !assist.translations[i]);
@@ -107,7 +112,7 @@ export function createTranscriptPanel({ active, upsert, notice, quote, addOvervi
     await refresh();
   }
   root.addEventListener("input", e => { if (e.target.id === "transcript-search") { pauseFollow(); query = e.target.value; page = 0; renderRows(); } });
-  root.addEventListener("change", e => { if (e.target.id === "transcript-video") { videoId = e.target.value; reset(); render(); } });
+  root.addEventListener("change", e => { if (e.target.id === "transcript-language") language = e.target.value; if (e.target.id === "transcript-video") { videoId = e.target.value; reset(); render(); } });
   function captureSelection() {
     const selection = window.getSelection(); if (!snapshot || !selection?.rangeCount || selection.isCollapsed) return;
     const range = selection.getRangeAt(0), original = [], translated = [];
@@ -136,18 +141,29 @@ export function createTranscriptPanel({ active, upsert, notice, quote, addOvervi
   async function action(name, button) {
     if (!name.startsWith("yt-")) return false;
     const note = active(); if (!note || note.id !== targetNote) throw new Error("请先打开对应的视频笔记。");
-    if (name === "yt-load") {
-      const id = note.id, video = videoId, saved = note.transcripts?.find(t => t.videoId === video);
-      notice(saved ? "正在打开已保存字幕…" : "正在读取原生字幕并保存到这篇笔记…");
-      let result;
-      if (saved) result = await adapter.cloud({ path: `/api/transcripts?note=${id}&id=${saved.id}` });
-      else {
-        const data = await adapter.transcript(video);
-        result = await adapter.cloud({ path: "/api/transcripts", method: "POST", body: { noteId: id, transcript: { ...data, title: note.sources.find(s => youtubeId(s.url) === video)?.label || note.title || "YouTube 视频" } } });
-        upsert(result.note); await adapter.remove("transcriptPending:" + video);
-      }
-      if (active()?.id === id && videoId === video) { snapshot = result.snapshot; assist = result.assist || { overview: null, translations: {} }; render(); await refresh(); await tick(true); }
-      notice("字幕已打开，可以先看 Overview，也可以直接边读边记。");
+    if (name === "yt-load" || name === "yt-reload") {
+      if (loading) return true;
+      const id = note.id, video = videoId, epoch = ++loadEpoch;
+      const saved = name === "yt-load" && note.transcripts?.find(t => t.videoId === video && (language === "auto" || sameCaptionLanguage(t.language, language)));
+      const requestedLanguage = language; loading = true; render();
+      notice(saved ? "正在打开已保存字幕…" : "正在获取字幕…");
+      try {
+        let result;
+        if (saved) result = await adapter.cloud({ path: `/api/transcripts?note=${id}&id=${saved.id}` });
+        else {
+          const { pendingKey, ...data } = await adapter.transcript(video, requestedLanguage);
+          result = await adapter.cloud({ path: "/api/transcripts", method: "POST", body: { noteId: id, activate: true, transcript: { ...data, title: note.sources.find(s => youtubeId(s.url) === video)?.label || note.title || "YouTube 视频" } } });
+          upsert(result.note);
+          if (pendingKey) await adapter.remove(pendingKey).catch(() => {});
+        }
+        if (active()?.id === id && videoId === video && epoch === loadEpoch) {
+          playbackEpoch++; currentIndex = -1; selected = null; query = ""; page = 0; following = true;
+          snapshot = result.snapshot; language = captionLanguage(snapshot.language) || "auto";
+          assist = result.assist || { overview: null, translations: {} }; job = null; terminalSeen = ""; quoteAttempted = false;
+          render(); await refresh(); await tick(true);
+          notice(`${captionLanguageName(snapshot.language)}字幕已${saved ? "打开" : "保存"}。`);
+        }
+      } finally { if (epoch === loadEpoch) { loading = false; render(); } }
     } else {
       if (!snapshot) throw new Error("先打开字幕再操作。");
       const index = Number(button.dataset.index), segment = snapshot.segments[index];

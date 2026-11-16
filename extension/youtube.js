@@ -16,6 +16,17 @@ export function youtubeUrl(id, time = null) {
   return `https://www.youtube.com/watch?v=${id}${Number.isFinite(time) && time >= 0 ? `&t=${Math.floor(time)}s` : ""}`;
 }
 export function transcriptText(segments, from, to) { return segments.slice(from, to + 1).map(s => s.text).join("\n"); }
+export function captionLanguage(value) {
+  const code = String(value || "").trim().replace(/_/g, "-").toLowerCase();
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,3}$/.test(code) && code !== "und" ? code : "";
+}
+export function captionLanguageName(value) {
+  const code = captionLanguage(value); if (!code) return "未知语言";
+  try { return new Intl.DisplayNames(["zh-CN"], { type: "language" }).of(code) || code; } catch { return code; }
+}
+export function sameCaptionLanguage(a, b) {
+  return !!captionLanguage(a) && captionLanguage(a).split("-")[0] === captionLanguage(b).split("-")[0];
+}
 export function transcriptRangeContainsTime(segments, from, to, time) {
   return Number.isFinite(time) && !!segments[from] && !!segments[to] && time >= segments[from].start && time <= segments[to].start + Math.max(segments[to].duration, 3);
 }
@@ -24,7 +35,7 @@ export function normalizeTranscript(data, videoId) {
   const segments = data.content.map(s => ({ text: typeof s.text === "string" ? s.text.trim() : "", start: s.offset / 1000, duration: s.duration / 1000 })).filter(s => s.text);
   if (!segments.length || segments.some(s => s.text.length > 20000 || !Number.isFinite(s.start) || s.start < 0 || s.start > 86400 || !Number.isFinite(s.duration) || s.duration < 0 || s.duration > 86400) || segments.reduce((n, s) => n + s.text.length, 0) > 300000) throw new Error("字幕格式或长度暂不支持，仍可继续手动记录。");
   segments.sort((a, b) => a.start - b.start);
-  return { videoId, language: String(data.lang || "und").slice(0, 30), segments };
+  return { videoId, language: captionLanguage(data.lang) || "und", availableLanguages: [...new Set([data.lang, ...(Array.isArray(data.availableLangs) ? data.availableLangs : [])].map(captionLanguage).filter(Boolean))].slice(0, 200), segments };
 }
 export async function fetchNativeTranscript(videoId, key, options = {}) {
   if (!youtubeUrl(videoId)) throw new Error("请选择一个 YouTube 视频。");
@@ -45,21 +56,41 @@ export async function fetchNativeTranscript(videoId, key, options = {}) {
     let data; try { data = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error("字幕服务返回了无法读取的内容，请重试。"); }
     return { status: response.status, data };
   }
+  const wanted = captionLanguage(options.language) || "en";
   const url = new URL("https://api.supadata.ai/v1/transcript");
   url.searchParams.set("url", youtubeUrl(videoId)); url.searchParams.set("text", "false"); url.searchParams.set("mode", "native");
+  url.searchParams.set("lang", wanted);
   // Do not request auto/generate: absent native captions must never trigger AI transcription.
-  let result = await get(url.href);
-  if (result.status === 202) {
-    const jobId = result.data.jobId;
-    if (typeof jobId !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(jobId)) throw new Error("字幕任务未能建立，请稍后重试。");
-    for (let i = 0; i < 40; i++) {
-      await pause(1500);
-      result = await get(`https://api.supadata.ai/v1/transcript/${encodeURIComponent(jobId)}`);
-      if (result.data.status === "failed" || result.data.error) throw new Error("字幕读取没有完成，仍可继续手动记录。");
-      if (result.data.status === "completed" || Array.isArray(result.data.content)) break;
+  async function fetchLanguage(language) {
+    url.searchParams.set("lang", language);
+    let result = await get(url.href);
+    if (result.status === 202) {
+      const jobId = result.data.jobId;
+      if (typeof jobId !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(jobId)) throw new Error("字幕任务未能建立，请稍后重试。");
+      for (let i = 0; i < 40; i++) {
+        await pause(1500);
+        result = await get(`https://api.supadata.ai/v1/transcript/${encodeURIComponent(jobId)}`);
+        if (result.data.status === "failed" || result.data.error) throw new Error("字幕读取没有完成，仍可继续手动记录。");
+        if (result.data.status === "completed" || Array.isArray(result.data.content)) break;
+      }
+    }
+    return normalizeTranscript(result.data.result || result.data, videoId);
+  }
+  let data = await fetchLanguage(wanted);
+  // Supadata may silently fall back to an unrelated language. Never label that
+  // as the requested language; explicit selection must either match or fail.
+  if (!sameCaptionLanguage(data.language, wanted)) {
+    if (options.explicit) throw new Error(`未取得${captionLanguageName(wanted)}字幕，服务返回了${captionLanguageName(data.language)}。原有字幕未更改，可换一种语言重试。`);
+    const fallback = data.availableLanguages.find(l => sameCaptionLanguage(l, wanted))
+      || data.availableLanguages.find(l => sameCaptionLanguage(l, "en"))
+      || data.availableLanguages.find(l => sameCaptionLanguage(l, "zh"));
+    if (fallback && !sameCaptionLanguage(data.language, fallback)) {
+      const next = await fetchLanguage(fallback);
+      if (!sameCaptionLanguage(next.language, fallback)) throw new Error("字幕服务返回的语言与所选语言不符，原有字幕未更改。请稍后重试。");
+      data = { ...next, availableLanguages: [...new Set([...data.availableLanguages, ...next.availableLanguages])] };
     }
   }
-  return normalizeTranscript(result.data, videoId);
+  return { ...data, selectionVersion: 1 };
 }
 
 // Last subtitle starting at/before the playhead; gaps retain the preceding context.

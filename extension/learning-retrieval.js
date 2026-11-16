@@ -38,7 +38,8 @@ export async function buildMaterials(notes,request){
        }
      }
    }catch(e){warnings.push(n.title+'：原文副本未能读取。');}
-   for(const meta of (n.transcripts||[]).slice(0,3))try{
+   const transcriptVideos=new Set();
+   for(const meta of (n.transcripts||[]).filter(t=>{if(transcriptVideos.has(t.videoId))return false;transcriptVideos.add(t.videoId);return true;}).slice(0,3))try{
      const {snapshot}=await request({path:'/api/transcripts?note='+n.id+'&id='+meta.id});
      let text='',start=0,from=0;
      for(let i=0;i<(snapshot?.segments||[]).length;i++){

@@ -199,7 +199,14 @@ export function createFolderRepository(root, id, lock = task => task()) {
         if(!note.sources.some(s=>youtubeId(s.url)===body.transcript.videoId)) throw new Error('字幕与当前视频不匹配。');
         if(body.transcript.segments.some(s=>!Number.isFinite(s.start)||s.start<0||!Number.isFinite(s.duration)||s.duration<0||typeof s.text!=='string')) throw new Error('字幕内容无效。');
         const snap={...body.transcript,id:await sha256(JSON.stringify({videoId:body.transcript.videoId,language:body.transcript.language,segments:body.transcript.segments})),segmentCount:body.transcript.segments.length,createdAt:now()};
-        if(note.transcripts?.some(t=>t.id===snap.id)) return {note,snapshot:await readJSON(root,`transcripts/${snap.id}.json`)};
+        if(note.transcripts?.some(t=>t.id===snap.id)) {
+          const saved=await readJSON(root,`transcripts/${snap.id}.json`);
+          if(body.transcript.selectionVersion===1) { saved.selectionVersion=1; saved.availableLanguages=body.transcript.availableLanguages||saved.availableLanguages||[]; await write(root,`transcripts/${snap.id}.json`,JSON.stringify(saved,null,2)); }
+          const {segments,...meta}=saved;
+          const ordered=body.activate===true?[meta,...note.transcripts.filter(t=>t.id!==snap.id)]:note.transcripts.map(t=>t.id===snap.id?meta:t);
+          if(JSON.stringify(ordered)!==JSON.stringify(note.transcripts)) { note.transcripts=ordered; note.revision++; note.updatedAt=now(); await commit(data,old); }
+          return {note,snapshot:saved,assist:await readJSON(root,`transcripts/${noteId}-${snap.id}-assist.json`,true)||{overview:null,translations:{}},assistProtocol:1};
+        }
         await write(root,`transcripts/${snap.id}.json`,JSON.stringify(snap,null,2));
         const {segments,...meta}=snap; note.transcripts=[meta,...(note.transcripts||[]).filter(t=>t.id!==snap.id)]; note.revision++; note.updatedAt=now();
         await commit(data,old); return {note,snapshot:snap,assist:{overview:null,translations:{}},assistProtocol:1};

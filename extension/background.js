@@ -177,7 +177,7 @@ async function dispatch(message,onProgress) {
   if (message.type === "TRANSCRIPT_CONFIG") return transcriptConfig();
   if (message.type === "TRANSCRIPT_CONFIG_SAVE") return saveTranscriptConfig(message.input);
   if (message.type === "TRANSCRIPT_CONFIG_CLEAR") return clearTranscriptConfig();
-  if (message.type === "TRANSCRIPT_FETCH") return getTranscript(message.videoId);
+  if (message.type === "TRANSCRIPT_FETCH") return getTranscript(message.videoId, { language: message.language, windowId: message.windowId });
   if (message.type === "YOUTUBE_PLAYBACK") return youtubePlayback(message.videoId, message.windowId);
   if (message.type === "YOUTUBE_SEEK") return seekYoutube(message.videoId, message.time, message.windowId);
   if (message.type === "CLOUD") return cloud(message.request);

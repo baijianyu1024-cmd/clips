@@ -107,7 +107,7 @@ export const adapter = native ? {
   saveTranscriptConfig: input => send({ type: "TRANSCRIPT_CONFIG_SAVE", input }),
   clearTranscriptConfig: () => send({ type: "TRANSCRIPT_CONFIG_CLEAR" }),
   allowTranscript: () => chrome.permissions.request({ origins: ["https://api.supadata.ai/*"] }),
-  transcript: videoId => send({ type: "TRANSCRIPT_FETCH", videoId }),
+  transcript: async (videoId, language = "auto") => send({ type: "TRANSCRIPT_FETCH", videoId, language, windowId: (await chrome.windows.getCurrent()).id }),
   playback: async videoId => send({ type: "YOUTUBE_PLAYBACK", videoId, windowId: (await chrome.windows.getCurrent()).id }),
   seek: async (videoId, time) => send({ type: "YOUTUBE_SEEK", videoId, time, windowId: (await chrome.windows.getCurrent()).id }),
   allowYoutube: () => chrome.permissions.request({ origins: ["https://www.youtube.com/*", "https://youtube.com/*", "https://m.youtube.com/*"] }),

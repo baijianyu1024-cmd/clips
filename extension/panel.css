@@ -186,3 +186,5 @@
 .im-chat .understand-save-status:empty{display:none}
 
 .settings-key-field{margin:14px 0}.settings-field-label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:7px}.settings-field-label label{margin:0}.settings-field-label a{font-size:12px;color:var(--muted);text-underline-offset:3px;white-space:nowrap}.settings-field-label a:hover{color:var(--ink)}
+
+.yt-language{display:flex;align-items:flex-end;gap:12px;margin:12px 0;flex-wrap:wrap}.yt-language label{display:flex;flex:1;min-width:150px;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}.yt-language select{width:100%;min-height:36px;font:inherit;color:var(--ink);padding:6px 30px 6px 10px;border:1px solid var(--line);border-radius:6px;background-color:var(--paper,#fff)}.yt-language button{min-height:36px;white-space:nowrap}
