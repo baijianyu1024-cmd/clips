@@ -103,7 +103,7 @@ export function createRecordEditor({ adapter, native, active, upsert, rerender, 
       const cached=await adapter.read(key(fresh));session = { ...fresh, ...cached };
       const mixed=["clip","legacy","image"].includes(kind), withImages=mixed||kind==="core";
       root.setAttribute('aria-label',kind==='core'?'编辑核心摘要':'编辑随读记录');
-      input.closest("label").hidden=!mixed; root.querySelector(".record-text-label span").textContent=kind==="core"?"核心摘要":kind==="review"||kind==="new-review"?"后来的理解":kind==="ai"?"AI 摘要":"原文摘录";
+      input.closest("label").hidden=!mixed; root.querySelector(".record-text-label span").textContent=kind==="core"?"核心摘要":kind==="review"||kind==="new-review"?"补充理解":kind==="ai"?"AI 摘要":"原文摘录";
       root.querySelector(".record-edit-tools").hidden=!withImages;root.querySelector(".record-anchor-hint").hidden=!(clip.transcriptAnchor||clip.anchor);
       textInput.maxLength=input.maxLength=kind==="clip"||kind==="image"?20000:40000;textInput.value=session.text??clip.text??"";
       input.value = session.thought; reload.hidden = editable(session.baseline) === editable(clip); status.classList.remove("error"); status.textContent = editable(session.baseline) !== editable(clip) ? "已恢复本机草稿；这条记录另有更新，保存前请核对。" : cached ? "已自动暂存" : "";

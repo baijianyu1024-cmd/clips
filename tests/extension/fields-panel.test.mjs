@@ -6,7 +6,7 @@ import { diskFolder } from './folder-fixture.mjs';
 import { openFolder, createFolderRepository } from '../../extension/folder-store.js';
 import { createFields } from '../../extension/core.js';
 
-test('side panel edits metadata, summary, quotation and later understanding without losing the composer draft', async t => {
+test('side panel edits metadata, summary and quotation while preserving reviews and the composer draft', async t => {
   const { window, document } = parseHTML(await readFile(new URL('../../extension/panel.html', import.meta.url), 'utf8'));
   globalThis.window = window; globalThis.document = document;
   window.HTMLElement.prototype.showModal = function() { this.open = true; };
@@ -21,7 +21,7 @@ test('side panel edits metadata, summary, quotation and later understanding with
   adapter.read = async key => structuredClone(storage.get(key));
   adapter.write = async (key, value) => storage.set(key, structuredClone(value));
   adapter.remove = async key => storage.delete(key);
-  adapter.cloud = repo.request; adapter.subscribe = () => {}; adapter.pending = async () => null;
+  let onUpdate; adapter.cloud = repo.request; adapter.subscribe = handler => { onUpdate = handler; }; adapter.pending = async () => null;
   adapter.job = async () => null; adapter.page = async () => ({ id: 1, url: fields.sources[0].url, title: fields.title });
   const interval = globalThis.setInterval; globalThis.setInterval = () => 1;
   try { await import('../../extension/panel.js'); } finally { globalThis.setInterval = interval; }
@@ -30,6 +30,7 @@ test('side panel edits metadata, summary, quotation and later understanding with
   const current = async () => (await repo.request({})).notes.find(n => n.id === note.id);
   const change = (selector, value) => { const el = document.querySelector(selector); el.value = value; el.dispatchEvent(new window.Event('input', { bubbles: true })); };
   await until(() => document.querySelector('[data-action="edit-metadata"]'));
+  assert.equal(document.querySelector('.review-entries'), null);
   click('[data-action="edit-metadata"]'); await until(() => document.querySelector('.note-metadata-editor').open);
   for (const name of ['title', 'published', 'timestamp', 'kind', 'status']) assert.ok(document.querySelector(`[name=${name}]`));
   change('[name=published]', '2026.11'); change('[name=title]', '修改标题');
@@ -50,13 +51,21 @@ test('side panel edits metadata, summary, quotation and later understanding with
   assert.equal((await current()).clips[0].text, '修改后的完整引用');
   assert.equal((await current()).clips[0].anchor, undefined);
   assert.equal((await current()).clips[0].thought, '自己的想法');
-  click('[data-kind=new-review]'); await until(() => document.querySelector('.record-editor'));
-  change('.record-editor .record-text', '回顾后补充的判断');
+  const beforeReview = await current();
+  await repo.request({ method: 'PATCH', body: { id: note.id, revision: beforeReview.revision, action: 'review', reviewId: crypto.randomUUID(), text: '回顾后补充的判断', days: 0 } });
+  onUpdate('quick-quotes'); await until(() => document.querySelector('[data-kind=review]'));
+  assert.equal(document.querySelector('.review-entries .entries-heading span').textContent, '补充理解');
+  assert.doesNotMatch(document.querySelector('#entries').textContent, /后来的理解/);
+  click('[data-kind=review]'); await until(() => document.querySelector('.record-editor'));
+  change('.record-editor .record-text', '修改后的补充理解');
   click('.record-editor [data-edit=save]'); await until(() => !document.querySelector('.record-editor'));
-  assert.equal((await current()).reviews[0].text, '回顾后补充的判断');
-  assert.ok(document.querySelector('[data-kind=review]'));
+  assert.equal((await current()).reviews[0].text, '修改后的补充理解');
+  click('[data-kind=new-review]'); await until(() => document.querySelector('.review-composer .record-editor'));
+  change('.record-editor .record-text', '再次补充');
+  click('.record-editor [data-edit=save]'); await until(() => !document.querySelector('.record-editor'));
+  assert.equal((await current()).reviews.length, 2);
   assert.ok(document.querySelector('[data-kind=legacy]'));
   assert.equal(document.querySelector('#thought').value, '尚未保存的写作草稿');
   const reopened = (await createFolderRepository(disk.root, target.id).request({})).notes[0];
-  assert.equal(reopened.published, '2026.11'); assert.equal(reopened.reviews.length, 1);
+  assert.equal(reopened.published, '2026.11'); assert.equal(reopened.reviews.length, 2);
 });

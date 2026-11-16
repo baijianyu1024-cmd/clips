@@ -125,7 +125,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "panel.js": {
-      "reference": "c63bc72dc4523e004255a4119f2b736ff4028f21b663abc4813ed396db178cba",
+      "reference": "75cbdae2735460dab97e9143e80a9e7cb595f3b4d9510d858b853e8bcf6aca8c",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage-target.js": {
@@ -137,7 +137,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "manifest.json": {
-      "reference": "cf3a21b9b9a56d317862578d763e7b1c60ebbb1face2e99251bf630bb210567e",
+      "reference": "a20100a702beab10c3c69c21e8ea7f50998025179cf57dd5226621b1d2f945e3",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.js": {
@@ -210,9 +210,9 @@
     "extension/understanding.js": "416a0a6a44a93122898b2a42f9fa6be63332446943161a5200e94c5bd71f706c",
     "extension/library.js": "92781f786a647f3ddc8b13c5b0b5887be71646acc863d22a6c01c2a9e857c040",
     "extension/youtube.js": "ae7aadb7844d5c02a28f42c86914621a78a33fdb6f9cfc5a3ad7ad732bb84084",
-    "extension/record-editor.js": "8688c1142748e4f87cbec99d80434fa6c49300c516ecf371570e7c7e8c76a233",
+    "extension/record-editor.js": "1437419787a42e2322ecc1dc61fb4fe2486ee21e77f5f2a6e598273528220fce",
     "extension/save-context.js": "a1495dce554e2ba77016f7c7c995a1ca0ade0292a08cadd6c2c6b32ac1ec7e4a",
-    "extension/panel.js": "0f4173fb2d8160ab01ece494ca87200b9b1fb2e73f60a2e530dd9538b4fee95a",
+    "extension/panel.js": "578d63b35d13a7cf069554fe66045666e17153b99c38494f3cf656004e017255",
     "extension/draft-store.js": "cb0e59d36aa568ce9c7efedf85a9df4baa0c53923f15be2b5befae622c02d8d4",
     "extension/note-fields.js": "a2c191fa3c0b7a67672544b591a8f3777add8e7b63af210b6c5689c55f265f5c",
     "extension/transcript-panel.js": "7fd4f958d1e7acd0d5966dc2887481c446717410efbe494b7bb90873f892f8ab",
@@ -223,9 +223,9 @@
     "extension/storage-target.js": "cdf5e9778b829c8d783fe0b4bfa6fce1bca341a6ac46377c83da5fe4adff66fd",
     "extension/THIRD_PARTY_NOTICES.txt": "bdd7dccb73386edcce4d0c5318af9a305b789a6c18883aed4fd5c236acf4fde8",
     "extension/page-content.js": "600639e20645ca8fbb757cab1553d5da7fd9c9c598ce2549d16d8901784540af",
-    "extension/panel.html": "6780699c52c5547fbc4bd12146836d358f0e11fa7513748386eaed501109870b",
+    "extension/panel.html": "21ab8439697154be8f875211a5f567beede72fce4c3791ca9d94c7fd8440d042",
     "extension/learning-ui.js": "6c9e48b5fe6b7f96ca04f2e1311bbce86e83c4600ed02b5ac29345c260e81476",
-    "extension/manifest.json": "ef38f1f65c0df86d5269ca0a6b13ff1c7afa98d90311f7587fd78f2c304629bd",
+    "extension/manifest.json": "42e7d4ec052cb1bbe8c2482e60f7a9356c6139ebe872906bad01870f870636db",
     "extension/stream-request.js": "e320b5fb39fda800ce9df347a6812c7be60af2807baddd3baa57cafd2da2d26a",
     "extension/transcript-service.js": "113edd0679a3d2c1be56200befaebbe9131fdc6ecbe0d840ba0917464aba670d",
     "extension/visual-material.js": "58d54cc2b7b01771c8aaeee8298e13d2facee2d3d010f2a6c099169f9aab53e0",
@@ -234,7 +234,7 @@
     "extension/learning-capture.js": "e75bc2b20c3d1849b2918e08c5619614e8b2dd9c572eaa508bb12853aca2af52",
     "extension/learning-retrieval.js": "59303611028a5b8763b83681761258c428c4ad9bf10de9c4e24e3d061a14fa87",
     "extension/image-drafts.js": "662a44b6f0f2f64847a59904a7b010ad670c32c4c5e6b8e740b3c5e45e098a95",
-    "extension/panel.css": "446b6fbc8719653234cf8824946f686ed534e4126e5e62e8e62d555e376f0d89",
+    "extension/panel.css": "1e5e420455f45c72457618c46bfe14e3436ac4bfc20f5a86d933a2b8b0924be9",
     "extension/summary-policy.js": "25d0605928432590124af7ec853918661c76caf8e8c299392a7d609a690472ed",
     "extension/storage.js": "76d73d786b72c3fac73143880a90179d314847c6dd4ad2e3f7c52a03c8946213",
     "extension/markdown.js": "9c676d5b1910197d4acae2be92665eacf7ccc086203b272a167336089ca27c6f",
