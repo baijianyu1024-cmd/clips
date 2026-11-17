@@ -1,3 +1,4 @@
+import { removeContent, applyNoteChanges } from './record-actions.js';
 import {streamRequest} from './stream-request.js';
 import { getTarget, targetKey, scopedStorage } from './storage-target.js';
 import { youtubeUrl } from "./youtube.js";
@@ -59,7 +60,11 @@ function demoCloud({ path = "/api/notes", method = "GET", body }) {
   }
   if (!old) throw new Error("找不到这条演示笔记。");
   if (old.revision !== body.revision) throw Object.assign(new Error("笔记有更新，请重试。"), { status: 409 });
-  const note = structuredClone(old);
+  let note = structuredClone(old);
+  if (body.action === "remove_content") note = removeContent(note, body.target);
+  if (body.action === "update_note") note = applyNoteChanges(note, body.changes);
+  if (body.action === "trash") note.deletedAt = new Date().toISOString();
+  if (body.action === "restore") note.deletedAt = null;
   if (body.action === "tag") {
     const catalog = demoCloud({ path: "/api/tags" }).tags;
     const tag = catalog.find(t => t.name.toLowerCase() === body.tag.toLowerCase());

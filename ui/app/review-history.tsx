@@ -1,5 +1,6 @@
 "use client";
 import {request, draftStorage} from "./client-runtime";
+import DeleteRecord from "./delete-record";
 import Markdown, { MarkdownHelp, MarkdownTextarea } from "./markdown";
 
 import { useEffect, useRef, useState } from "react";
@@ -54,7 +55,7 @@ export default function ReviewHistory({ note, onUpdate, editId, onClose }: { not
   if (!note.reviews.length) return null;
   return <section className="review-history" aria-label="后来的理解"><div className="section-heading"><h3>后来的理解</h3><span>{note.reviews.length} 条补充</span></div>
     {error && <p className="field-error" role="alert">{error}</p>}{editId && draft && draft.id !== editId && <p className="field-error">这篇笔记有未保存的理解，请先处理这份草稿。</p>}
-    {note.reviews.filter(r => !editId || r.id === (draft?.id || editId)).map(r => <div className="timeline-entry" key={r.id}><div className="timeline-dot"/><div className="review-entry-meta"><time>{new Date(r.createdAt).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}</time>{!readOnly && !(editing && draft?.id === r.id) && <button className="text-button" disabled={busy} aria-label={`修改理解：${r.text.slice(0, 30)}`} onClick={() => edit(r.id)}><Pencil size={12}/>{draft?.id === r.id ? "继续修改" : "修改"}</button>}</div>
+    {note.reviews.filter(r => !editId || r.id === (draft?.id || editId)).map(r => <div className="timeline-entry" key={r.id}><div className="timeline-dot"/><div className="review-entry-meta"><time>{new Date(r.createdAt).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}</time>{!readOnly && !(editing && draft?.id === r.id) && <button className="text-button" disabled={busy} aria-label={`修改理解：${r.text.slice(0, 30)}`} onClick={() => edit(r.id)}><Pencil size={12}/>{draft?.id === r.id ? "继续修改" : "修改"}</button>}{!readOnly && <DeleteRecord note={note} kind="review" id={r.id} onUpdate={onUpdate} onDeleted={() => { if (draft?.id === r.id) clear(); }}/>}</div>
       {editing && draft?.id === r.id && !readOnly ? <form className="review-inline-editor" onSubmit={e => { e.preventDefault(); void save(); }}>
         <MarkdownTextarea aria-label="后来的理解内容" rows={4} maxLength={40000} value={draft.text} disabled={busy} onChange={e => keep({ ...draft, text: e.target.value })} onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); void save(); } }}/>
         <MarkdownHelp/>{conflict && <div className="field-error"><details className="edit-comparison"><summary>查看当前保存的理解</summary><Markdown className="prose">{r.text || "暂无补充"}</Markdown></details><button type="button" className="text-button" onClick={() => { keep({ ...draft, revision: note.revision }); setConflict(false); setError(""); }}>已对照，继续保存这份草稿</button></div>}

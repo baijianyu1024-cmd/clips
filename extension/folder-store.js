@@ -1,3 +1,4 @@
+import { removeContent, applyNoteChanges } from './record-actions.js';
 import { findNote } from './core.js';
 import { retireQueueDuplicates } from './queue-links.js';
 import { canonical, createFields } from './core.js';
@@ -72,16 +73,18 @@ function noteDefaults(note) {
 function tagsState(data) { return { revision:data.tagRevision || 0, tags:allTags(data).map(name => ({ name, count:data.notes.filter(n => !n.deletedAt && !n.archived && n.status!=='inbox' && n.tags.some(t=>normalize(t)===normalize(name))).length,usageCount:data.notes.filter(n=>n.tags.some(t=>normalize(t)===normalize(name))).length })) }; }
 export function mutateLocalNote(current, body) {
   if (current.revision !== body.revision) conflict();
-  const n = noteDefaults(structuredClone(current)), action = body.action;
+  let n = noteDefaults(structuredClone(current)); const action = body.action;
   if (['edit_metadata','edit_record','remove_image','edit_image_record','edit_review','edit_ai_summary','tag','start_reading','add_clip','add_ai_summary','position','status','add_image'].includes(action)&&(n.deletedAt||n.archived)) throw new Error('请先恢复笔记，再修改。');
   if(n.status==='inbox'&&['add_clip','add_ai_summary','position','add_image'].includes(action))n.status='reading';
-  if (action === 'add_clip') { if (!uuid(body.clip?.id)) throw new Error('记录无效。'); if (!n.clips.some(c => c.id === body.clip.id)) { n.clips.push(body.clip); if (body.clip.sourceUrl && !n.sources.some(s=>s.url===body.clip.sourceUrl)) n.sources.push({url:body.clip.sourceUrl,label:body.clip.sourceTitle||''}); } }
+  if (action === 'remove_content') n = removeContent(n, body.target);
+  else if (action === 'update_note') n = applyNoteChanges(n, body.changes);
+  else if (action === 'add_clip') { if (!uuid(body.clip?.id)) throw new Error('记录无效。'); if (!n.clips.some(c => c.id === body.clip.id)) { n.clips.push(body.clip); if (body.clip.sourceUrl && !n.sources.some(s=>s.url===body.clip.sourceUrl)) n.sources.push({url:body.clip.sourceUrl,label:body.clip.sourceTitle||''}); } }
   else if (action === 'edit_record') { if(body.record?.id==='legacy'){n.summary=body.record.text;n.thought=body.record.thought;if(body.record.images)n.legacyRecordImages=body.record.images;}else{const record = n.clips.find(c=>c.id===body.record?.id); if (!record) throw new Error('记录不存在。'); if(record.text!==body.record.text) { delete record.anchor; delete record.transcriptAnchor; delete record.translation; } Object.assign(record,{text:body.record.text||'',thought:body.record.thought||'',...(body.record.images ? {images:body.record.images} : {})});} }
   else if(action==='edit_image_record'){const image=n.images.find(i=>i.key===body.imageKey);if(!image){if(n.clips.some(c=>c.id===body.record.id))return current;throw new Error('截图记录不存在。');}n.images=n.images.filter(i=>i.key!==image.key);n.clips.push({...body.record,sourceUrl:n.sources[0]?.url||'',sourceTitle:n.sources[0]?.label||'',createdAt:image.createdAt||n.createdAt,videoTime:null});}
   else if(action==='edit_ai_summary'){const a=n.aiSummaries.find(a=>a.id===body.aiSummaryId);if(!a)throw new Error('摘要不存在。');a.text=body.text;}
   else if (action === 'add_image') { if(!n.images.some(i=>i.key===body.image.key))n.images.push({...body.image,createdAt:body.image.createdAt||now()}); }
   else if (action === 'remove_image') n.images=n.images.filter(i=>i.key!==body.imageKey);
-  else if (action === 'remove_record') n.clips = n.clips.filter(c=>c.id!==body.recordId);
+  else if (action === 'remove_record') n = removeContent(n, {kind:'clip',id:body.recordId});
   else if (action === 'set_clip_translation') { const clip = n.clips.find(c=>c.id===body.clip?.id); if (!clip) throw new Error('记录不存在。'); if(clip.text!==body.clip.text||clip.sourceUrl!==body.clip.sourceUrl||JSON.stringify(clip.transcriptAnchor)!==JSON.stringify(body.clip.transcriptAnchor)) conflict(); clip.translation = body.clip.translation; }
   else if (action === 'set_core_summary') { if(n.coreSummary?.id===body.coreSummary.id)return n;if ((n.coreSummary?.id||null)!==(body.expectedCoreSummaryId??null)) conflict(); if (n.coreSummary) n.coreSummaryHistory=[...(n.coreSummaryHistory||[]),n.coreSummary].slice(-20); n.coreSummary=summaryDefaults(body.coreSummary); }
   else if (action === 'add_ai_summary') { if (!n.aiSummaries.some(a=>a.id===body.aiSummary.id)) n.aiSummaries.push(body.aiSummary); }

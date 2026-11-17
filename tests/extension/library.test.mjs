@@ -46,6 +46,18 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  $('[aria-label="管理标签"]').click();await until(()=>$('[aria-label="新标签名称"]'));input('[aria-label="新标签名称"]','测试标签');await pause();submit('.tag-manager-create');await until(()=>!!$('[aria-label="重命名标签 测试标签"]'));
  $('[aria-label="重命名标签 测试标签"]').click();await pause();input('input[aria-label="重命名标签 测试标签"]','已改名');await pause();submit('.tag-rename-form');await until(()=>!!$('[aria-label="筛选标签 已改名"]'));$('[aria-label="关闭标签管理"]').click();await pause();
  const reopened=createFolderRepository(disk.root,target.id);assert.equal((await reopened.request()).notes[0].clips.length,1);assert.ok((await reopened.request({path:'/api/tags'})).tags.some(t=>t.name==='已改名'));
+ // Cancelling deletion is a no-op; confirming removes exactly one record.
+ let confirmation='';window.confirm=m=>{confirmation=m;return false;};
+ $('.reading-log [aria-label="删除记录"]').click();await pause();
+ assert.match(confirmation,/随读记录/);assert.equal((await repo.request()).notes[0].clips.length,1);
+ window.confirm=()=>true;$('.reading-log [aria-label="删除记录"]').click();
+ await until(()=>!$('.reading-log [aria-label="删除记录"]'));assert.equal((await repo.request()).notes[0].clips.length,0);
+ assert.equal((await repo.request()).notes[0].coreSummary.text,'- 简洁的核心摘要');
+ window.confirm=()=>false;clickText('删除笔记');await pause();assert.equal((await repo.request()).notes[0].deletedAt,null);
+ window.confirm=()=>true;clickText('删除笔记');await until(()=>document.querySelector('.note-detail')?.textContent.includes('侧栏 AI 摘要兼容验证'));
+ assert.ok((await repo.request()).notes.find(n=>n.id===note.id).deletedAt);
+ clickText('已删除');await until(()=>document.querySelector('.note-detail')?.textContent.includes('共享界面验证'));
+ clickText('恢复');await pause();assert.equal((await repo.request()).notes.find(n=>n.id===note.id).deletedAt,null);
  // Unmount to remove polling timers before closing the DOM.
  dom.window.close();
 });

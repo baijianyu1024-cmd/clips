@@ -33,7 +33,8 @@
     "lib/reader/model.ts",
     "lib/reader/source.ts",
     "lib/transcript-assist-model.ts",
-    "lib/transcript-model.ts"
+    "lib/transcript-model.ts",
+    "app/delete-record.tsx"
   ],
   "shared": [
     "ai-stream.js",
@@ -95,7 +96,8 @@
     "agent-service.js",
     "agent-ui.js",
     "agent.css",
-    "agent.html"
+    "agent.html",
+    "record-actions.js"
   ],
   "variants": {
     "learning-local.js": {
@@ -107,7 +109,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "adapter.js": {
-      "reference": "e2258a158627446b902cb641e808f1be9eba2652054e0b0aa6aff68a2aa0dd33",
+      "reference": "f89e46cdb1d1edd7ea9b273abd99aa980ee2bd5ee37ebe968b6bc4c8605d182b",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.html": {
@@ -131,7 +133,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "panel.js": {
-      "reference": "e3ab9cac4a214bd920270da0c7a6b9a64ef270acfd87aa63d7ea82b1211062f7",
+      "reference": "4e4ff621044cb31a87251b67f393b3080adc7ff674e981210246e8b426760c9b",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage-target.js": {
@@ -143,7 +145,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "manifest.json": {
-      "reference": "c93f63dad14d74d33581d3359a824bf79d92b6e39a4b2853b0c4646b2bb733ff",
+      "reference": "92d80ba5a874818fa4a05237f49950aa45b83c5cdff2beaf7a142dfe91ee0d5a",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.js": {
@@ -153,23 +155,23 @@
   },
   "public": {
     "ui/app/client-runtime.tsx": "cf38a02b216acb7d91483fdd3c54cf4b0e20ce330d35c34b7b982fc0ae1e6104",
-    "ui/app/core-summary.tsx": "60d626df61ab106d99f633cf419b32349a21e575752c93fe59e6d5f9812c777f",
+    "ui/app/core-summary.tsx": "196f48a8c9df41427351f3879da13c351cf2c9768568abe458bc2daff9e6b1d4",
     "ui/app/globals.css": "1077550e87a84724d768a37f929c363e8352a71bf626f96327ffa31e466d6216",
     "ui/app/library-home.css": "78cd7980c79035a28ff02d73e17cf5fd0533f4620faf873bc5a038c23d33b922",
-    "ui/app/library-home.tsx": "828ae50da69ca70f4e091d3614dc03f45ae8d04f33773c000c9a032b2a7d3bea",
+    "ui/app/library-home.tsx": "79b10b53c319fe1b535fe0185c17ef96abc1b3df1ab555db8e8db53e41a61325",
     "ui/app/library-records.ts": "7db62a410b2fe2cd3be13faed9dcba23599ee7712ffcb3e0d74ca5f699d7c42f",
     "ui/app/library.css": "14c0bd1937984bdb61698d1dbc63b9504da8c3175e948f6f0fa734a51c0d89e1",
     "ui/app/markdown.tsx": "93e69f9f5dc8bed2637fbfbb589ebd876d51fce3ba2f43b4c0241a8928c74aca",
-    "ui/app/model.ts": "333d6793abf638d46dc8cca6eab40f16bdde24b6ef2ee74d3b04507a93a4b9db",
-    "ui/app/note-content.css": "d15560bd62b223354422c12e9b02bbe620a5ebf1d03c6ace75000ea9af16c3a9",
-    "ui/app/notebook.tsx": "85020ff96b1ea25d4b18d8f00843ab6dcb834aad80ccd1743d1f9319a5f47ec4",
+    "ui/app/model.ts": "2283b68dd26edc30f2c72f106e21315e480f88c6fa7b58a1fc5521f016415596",
+    "ui/app/note-content.css": "27a4aee85e0e0041ca87df36d6b4ea66e1c93d39ee2fe9d02826d6dba0c2b68a",
+    "ui/app/notebook.tsx": "f600fe48a5c148ac0defe28890b2fbe8052608df9540e650696d043df703ea92",
     "ui/app/queue-titles.ts": "3e35aea809045ca1b4837de4faaac17c3a89d1b7fab87f8551b0eabc8aa5ad80",
     "ui/app/reading-queue.css": "4b51a3de9dbdd818d4cde86dea89e022cc3698383521309dc5f5a16822b1f930",
     "ui/app/reading-queue.tsx": "43b8186a1bec76227925a373fa80ed0c7e75cea7c06146f700b3c9e40e5f8864",
-    "ui/app/reading-timeline.tsx": "5f24426fccb3719a83a7ca38c7be273d62dce218da9432e0c073f22baac6a373",
+    "ui/app/reading-timeline.tsx": "055f7e70da605d4f0c45853040a98bf3b0557b256b72f5a1276147356ec86149",
     "ui/app/reflection-form.tsx": "16315203141ee057fbf19035cd274ddbc78756db31bf3117aee5752605bfe549",
-    "ui/app/review-history.tsx": "3f14c32225e5746a5a7329c74e6f0cb8a1286927f0df7951ad7df8f03cba0fdc",
-    "ui/app/sidebar.tsx": "a6800b79696845a9d05c8396e13cf8cf7a61101df358b82764fca810a68c94df",
+    "ui/app/review-history.tsx": "ecfbdaff51212c0b0a5d905096fd585c8fc4be75cb37bc6cf55cd6f6fe145689",
+    "ui/app/sidebar.tsx": "c8954e6ea047d57ea4bc1bbddbc3c9615f9d8e4acf3f557b9d4ee421816786ea",
     "ui/app/source-reader.css": "7b5a0113052ad630004b0d84d878231b74a3c108d7ef46419079204d82272a0b",
     "ui/app/source-reader.tsx": "f90a7a22bdea536cd447059254d4c02f30ba453a02d2e73d984788fdbb16db75",
     "ui/app/tag-manager.css": "c41f675e7b50a8258bf1c9a8564334963e9dd795d72addc430b626a1ef2eccdb",
@@ -190,7 +192,7 @@
     "extension/content-edit.js": "77d015316b8739e845d45e7cf6247f8a49686272667d9c9f55e23e754f865c97",
     "extension/library-platform.js": "5062fedd38c70f6ee6d73ba9f72fa79b1cfb4e1adf2685f093aee875613f7375",
     "extension/preview.html": "b3cc3758463723cca352e2800dfea9631d845e784d21d1638f38c5e708818f38",
-    "extension/adapter.js": "0289693b28fd5199f59a60bd1b0babac917e2067cc1f8470acc8a1fa64b99e2d",
+    "extension/adapter.js": "928fce33dece2d2407aeaee7fc147e45cb00308be445e0c50f5afa999709a01a",
     "extension/quote-context.js": "43a7482cf724f1f8c884cafeb428c86b2293b9a8c8740134b8286fb64479b3d7",
     "extension/markdown-editor.js": "046b44dffb499c42cc3645fe52f38f32d4123a7510e5944c5ab210d6ff854c2a",
     "extension/library.css": "6a30f91c4a22eb1c59f441848479a7cfeee1e3ab06761873610ed7c35ed5153d",
@@ -216,22 +218,22 @@
     "extension/understanding.js": "416a0a6a44a93122898b2a42f9fa6be63332446943161a5200e94c5bd71f706c",
     "extension/library.js": "92781f786a647f3ddc8b13c5b0b5887be71646acc863d22a6c01c2a9e857c040",
     "extension/youtube.js": "ae7aadb7844d5c02a28f42c86914621a78a33fdb6f9cfc5a3ad7ad732bb84084",
-    "extension/record-editor.js": "1437419787a42e2322ecc1dc61fb4fe2486ee21e77f5f2a6e598273528220fce",
+    "extension/record-editor.js": "ea7c21e8f8aa9d33255549aa3010b1e6ec891e58045e7508a882ba33fbb3de6e",
     "extension/save-context.js": "a1495dce554e2ba77016f7c7c995a1ca0ade0292a08cadd6c2c6b32ac1ec7e4a",
-    "extension/panel.js": "ae9be8ab4353e36f3a624caa084992a00522436d9d9d9384c5f4a5a95ce8bd29",
+    "extension/panel.js": "6e6ef08e99d6f95feb4f630c370a969d20cbfa92fb104d9358808d4fee92a984",
     "extension/draft-store.js": "cb0e59d36aa568ce9c7efedf85a9df4baa0c53923f15be2b5befae622c02d8d4",
     "extension/note-fields.js": "a2c191fa3c0b7a67672544b591a8f3777add8e7b63af210b6c5689c55f265f5c",
     "extension/transcript-panel.js": "7fd4f958d1e7acd0d5966dc2887481c446717410efbe494b7bb90873f892f8ab",
     "extension/summary-save.js": "de7d2df2b4ddbfd6461f88265d94c0a85823f253f9a1de951f30ca74ec9339ec",
     "extension/ai-stream.js": "6b6d281cb1b56510ba5f3a43a3d3515f7303bc3dfb0fed2d251ffcfd25685cc3",
-    "extension/folder-store.js": "7d525311e51cfe47b3927f27e9029ef0b7bd2c90d68b04b1f41279705155818b",
+    "extension/folder-store.js": "27f2a672ce29209cfb3220c4319b0efc03fabc7df038a4d486145a60fe2ccc1d",
     "extension/quick-quote.js": "b55d0bebd6c9f3b3d93f18ba68ebe76b57e967619fb58b301d979686a8d2381f",
     "extension/storage-target.js": "cdf5e9778b829c8d783fe0b4bfa6fce1bca341a6ac46377c83da5fe4adff66fd",
     "extension/THIRD_PARTY_NOTICES.txt": "bdd7dccb73386edcce4d0c5318af9a305b789a6c18883aed4fd5c236acf4fde8",
     "extension/page-content.js": "600639e20645ca8fbb757cab1553d5da7fd9c9c598ce2549d16d8901784540af",
-    "extension/panel.html": "5b55dad13490a7dc79426790a16983b3c48110cfbc7b7e026307bb7594b4726b",
+    "extension/panel.html": "cf525172c6e932856f9596e25c39b34d8409fd753c9751703f8b3df2cd1b953b",
     "extension/learning-ui.js": "6c9e48b5fe6b7f96ca04f2e1311bbce86e83c4600ed02b5ac29345c260e81476",
-    "extension/manifest.json": "20ce48c14801d1ec0c211c6d73531108ca59a058b1c6b11bf16e5a6b57d8bb51",
+    "extension/manifest.json": "e3384b6ea5916b717130aa143dbe19674d5d71c9d3ff77c2b59339ad471890ef",
     "extension/stream-request.js": "e320b5fb39fda800ce9df347a6812c7be60af2807baddd3baa57cafd2da2d26a",
     "extension/transcript-service.js": "113edd0679a3d2c1be56200befaebbe9131fdc6ecbe0d840ba0917464aba670d",
     "extension/visual-material.js": "58d54cc2b7b01771c8aaeee8298e13d2facee2d3d010f2a6c099169f9aab53e0",
@@ -240,7 +242,7 @@
     "extension/learning-capture.js": "e75bc2b20c3d1849b2918e08c5619614e8b2dd9c572eaa508bb12853aca2af52",
     "extension/learning-retrieval.js": "59303611028a5b8763b83681761258c428c4ad9bf10de9c4e24e3d061a14fa87",
     "extension/image-drafts.js": "662a44b6f0f2f64847a59904a7b010ad670c32c4c5e6b8e740b3c5e45e098a95",
-    "extension/panel.css": "1e5e420455f45c72457618c46bfe14e3436ac4bfc20f5a86d933a2b8b0924be9",
+    "extension/panel.css": "cd3227ac3d4da14b6de503c55c3578d9549b62369d036124c3dd7eaedcb4bb23",
     "extension/summary-policy.js": "25d0605928432590124af7ec853918661c76caf8e8c299392a7d609a690472ed",
     "extension/storage.js": "76d73d786b72c3fac73143880a90179d314847c6dd4ad2e3f7c52a03c8946213",
     "extension/markdown.js": "9c676d5b1910197d4acae2be92665eacf7ccc086203b272a167336089ca27c6f",
@@ -254,10 +256,12 @@
     "extension/vendor/markdown-it-LICENSE.txt": "792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473",
     "extension/queue-links.js": "ff08f0782e8796cea59c856c7fab940db363c9021a315c896c38505d6b4f3099",
     "extension/agent-bridge.js": "168e5c551c14d87f63bc218f1800b2b87a3f5f5b0a689d1ef3e628b95272faad",
-    "extension/agent-protocol.js": "08f8fc57a8c7b725b28f8f5dea3d43f5086c326d779310298bb980825d0f7e81",
-    "extension/agent-service.js": "56638561ef92cccf19c1a7f2b8fbcc1c3dda22a251cc32d1bcd5c69f30efb1c4",
+    "extension/agent-protocol.js": "29ce43524681d816fba0f19666b8a91df35dc15f3cc8edd526123de6351a0b82",
+    "extension/agent-service.js": "36659a6c30a322af0c7cf542a3c0bbdbeb58dea54458a1280bf893399bad4c26",
     "extension/agent-ui.js": "f463b067fa4c6b74c80a442f1d4c504ce494f4b7c018efe524d9ece3a95af66b",
     "extension/agent.css": "b57def466bfe81f562b8fe8a22626a9b27601549e67b3c941970bce45cd1e224",
-    "extension/agent.html": "f9ca43a872fc4a287e5c94c5ddd9a52633ee8a8a02dfdcea5d069f7c8601b332"
+    "extension/agent.html": "f9ca43a872fc4a287e5c94c5ddd9a52633ee8a8a02dfdcea5d069f7c8601b332",
+    "ui/app/delete-record.tsx": "f0ac61a1914d75da0906c4e7c733a295203d597a9d22c6f03fcdeeb6cba8e7c9",
+    "extension/record-actions.js": "20a1741570c6119b8bc5b5dbcf9075088b331a8a29d5fb48aba9faff56ed58af"
   }
 }

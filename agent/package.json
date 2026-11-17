@@ -1,10 +1,19 @@
 {
   "name": "clips-agent",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22.13.0" },
-  "dependencies": { "@modelcontextprotocol/sdk": "1.32.2", "ws": "8.23.0" },
-  "scripts": { "start": "node server.mjs", "setup": "node cli.mjs setup", "test": "node --test ../tests/agent/*.test.mjs" }
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "ws": "8.23.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "setup": "node cli.mjs setup",
+    "test": "node --test ../tests/agent/*.test.mjs"
+  }
 }

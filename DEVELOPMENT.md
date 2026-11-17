@@ -34,3 +34,5 @@ npm test
 ```
 
 新增工具需同步 `extension/agent-protocol.js`、验证、测试与 `docs/AGENT.md`。连接器与插件更新时应保持协议兼容，安装说明涵盖 Windows 和 Mac。测试仅使用虚构资料库，不调用付费 API。
+
+删除必须使用 prepare → 用户确认 → delete 两步流程；凭证绑定资料库、目标和 revision。不要自动用新 revision 重试删除。产品删除入口使用二次确认，本地与云端共用记录删除规则。

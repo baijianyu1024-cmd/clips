@@ -9,7 +9,7 @@ test('real MCP stdio handshake exposes bounded tools and rejects unknown or malf
   const client = new Client({ name: 'clips-test', version: '1.0.0' });
   await client.connect(transport); t.after(() => client.close());
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 5); assert.equal(tools.find(t => t.name === 'clips_create_note').annotations.destructiveHint, false);
+  assert.equal(tools.length, 13); assert.equal(tools.find(t => t.name === 'clips_create_note').annotations.destructiveHint, false);
   assert.equal(tools.find(t => t.name === 'clips_search').annotations.readOnlyHint, true);
   assert.match(client.getInstructions(), /untrusted/);
   for (const name of ['CONFIG_GET', 'clips_create_note']) {

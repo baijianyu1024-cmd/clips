@@ -61,7 +61,7 @@ export async function startBroker({ config, persist = saveConfig, port = AGENT_P
       if (pending.size >= 16) throw error('BUSY', '请求过多，请稍后重试。');
       const id = randomUUID(), socket = peer;
       const result = await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => { pending.delete(id); reject(error('TIMEOUT', 'Clips 未及时响应。写入可能已完成；请用相同 request_id 重试。')); }, timeout);
+        const timer = setTimeout(() => { pending.delete(id); reject(error('TIMEOUT', 'Clips 未及时响应。写入可能已完成；请先核对状态。新建或追加使用相同 request_id 重试；修改使用相同字段和 revision，删除使用原确认信息，过期后需重新确认。')); }, timeout);
         pending.set(id, { resolve, reject, timer, socket });
         socket.send(JSON.stringify({ type: 'call', id, name: body.name, arguments: body.arguments || {} }));
       });

@@ -61,6 +61,8 @@ export const fieldsSchema = z.object({
 });
 export const reviewSchema = z.object({ id: z.string().uuid(), text: z.string().trim().max(40000), createdAt: dateString, nextAt: dateString.nullable() });
 export const metadataSchema = fieldsSchema.pick({ title: true, sources: true, kind: true, tags: true, timestamp: true, published: true, status: true });
+export const noteChangesSchema = metadataSchema.partial().extend({ title: z.string().trim().min(1).max(200).optional(), core_summary: z.string().trim().max(40000).optional() }).strict().refine(v => Object.keys(v).length > 0, "请选择需要修改的字段。");
+export const recordTargetSchema = z.object({ kind: z.enum(["clip", "legacy", "image", "review", "ai", "core"]), id: z.string().min(1).max(500) }).strict();
 export const noteSchema = fieldsSchema.extend({
   transcripts: z.array(transcriptMetaSchema).max(30).optional(),
   legacyRecordImages: z.array(imageSchema).max(30).optional(),

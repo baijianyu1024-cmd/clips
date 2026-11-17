@@ -190,3 +190,5 @@
 .yt-language{display:flex;align-items:flex-end;gap:12px;margin:12px 0;flex-wrap:wrap}.yt-language label{display:flex;flex:1;min-width:150px;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}.yt-language select{width:100%;min-height:36px;font:inherit;color:var(--ink);padding:6px 30px 6px 10px;border:1px solid var(--line);border-radius:6px;background-color:var(--paper,#fff)}.yt-language button{min-height:36px;white-space:nowrap}
 
 .review-composer:empty { display: none; }
+
+.quiet.danger{color:#a3423a}.entry-head{flex-wrap:wrap;gap:8px}.entry-head>time,.entry-head>span{margin-right:auto}

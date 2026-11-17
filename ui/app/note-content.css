@@ -23,3 +23,5 @@
 @media(max-width:500px){.core-summary{padding:0 0 20px}.reading-event{padding-left:17px}.reading-event-meta{gap:7px}}
 
 .detail-publication{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin:0 0 14px;font-size:12px;line-height:1.7}.detail-publication dt{color:var(--muted)}.detail-publication dd{margin:0;color:var(--ink);font-variant-numeric:tabular-nums}
+
+.delete-record-control{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}.delete-record-control .field-error{flex-basis:100%;font-size:12px}.reading-event-meta,.review-entry-meta{flex-wrap:wrap;gap:8px}.text-button.danger{color:#a3423a}

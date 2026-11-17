@@ -1,5 +1,6 @@
 "use client";
 import {request, draftStorage, MediaImage} from "./client-runtime";
+import DeleteRecord from "./delete-record";
 import Markdown, { MarkdownHelp, MarkdownTextarea } from "./markdown";
 
 import { useEffect, useRef, useState } from "react";
@@ -166,7 +167,7 @@ export default function ReadingTimeline({ note, onUpdate, onPreview, onAnchor, e
     <ol className="reading-timeline">{entries.map(e => {
       const editing = expanded && draft?.target === e.id && !readOnly;
       return <li className="reading-event" key={e.id}><span className="reading-event-dot" aria-hidden="true"/>
-        <div className="reading-event-meta">{e.at ? <time dateTime={e.at}>{stamp(e.at)}</time> : <span>时间未记录</span>}<span>{e.type === "legacy" ? "此前留下的记录" : e.type === "image" ? "截图" : e.clip.text ? viewQuote(e.clip).language === "other" ? "中文引用" : "原文摘录" : "记录"}</span>{!readOnly && !editing && <button className="text-button record-edit" disabled={busy} aria-label={`修改记录：${e.at ? stamp(e.at) : "截图"}`} onClick={() => edit(e.id)}><Pencil size={12}/>修改</button>}</div>
+        <div className="reading-event-meta">{e.at ? <time dateTime={e.at}>{stamp(e.at)}</time> : <span>时间未记录</span>}<span>{e.type === "legacy" ? "此前留下的记录" : e.type === "image" ? "截图" : e.clip.text ? viewQuote(e.clip).language === "other" ? "中文引用" : "原文摘录" : "记录"}</span>{!readOnly && !editing && <button className="text-button record-edit" disabled={busy} aria-label={`修改记录：${e.at ? stamp(e.at) : "截图"}`} onClick={() => edit(e.id)}><Pencil size={12}/>修改</button>}{!readOnly && <DeleteRecord note={note} kind={e.type} id={e.id} onUpdate={onUpdate} onDeleted={() => { if (draft?.target === e.id) clear(); }}/>}</div>
         {editing ? editor(e.id, e) : content(e)}
       </li>;
     })}</ol>

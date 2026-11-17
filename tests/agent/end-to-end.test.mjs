@@ -23,7 +23,7 @@ test('MCP → loopback broker → extension bridge → real folder, including sw
   globalThis.WebSocket = class extends WebSocket { constructor(url) { super(String(url).replace(AGENT_ORIGIN.replace('http:', 'ws:'), origin.replace('http:', 'ws:')), { origin: 'chrome-extension://' + ext }); } };
   const data = { clipsStorageTarget: target }, event = { addListener() {} };
   globalThis.chrome = {
-    runtime: { id: ext, getManifest: () => ({ version: '0.16.0' }), onStartup: event },
+    runtime: { id: ext, getManifest: () => ({ version: '0.17.0' }), onStartup: event },
     permissions: { contains: async () => true, onRemoved: event },
     alarms: { create: async () => {}, clear: async () => {}, onAlarm: event },
     storage: { local: { get: async keys => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(k => [k, data[k]])), set: async values => Object.assign(data, values), remove: async k => { delete data[k]; } }, onChanged: event },
@@ -51,6 +51,21 @@ test('MCP → loopback broker → extension bridge → real folder, including sw
   const read = await tool('clips_get_note', { note_id: n.id }); assert.match(read.structuredContent.text, /第二条想法/);
   const saved = JSON.parse(await disk.read('clips.json')); assert.equal(saved.notes.length, 1); assert.equal(saved.notes[0].clips.length, 1);
   assert.equal(data.clipsAgentLastWrite.noteId, n.id);
+  const updated=await tool('clips_update_note',{note_id:n.id,revision:read.structuredContent.revision,changes:{title:'完整增删改查'}});
+  assert.equal(updated.isError,undefined);
+  const records=await tool('clips_list_records',{note_id:n.id});assert.equal(records.structuredContent.total,2);
+  const row=records.structuredContent.records.find(r=>r.kind==='clip');
+  const revised=await tool('clips_update_record',{note_id:n.id,revision:updated.structuredContent.revision,kind:'clip',record_id:row.record_id,request_id:crypto.randomUUID(),changes:{thought:'修改后的想法'}});
+  assert.equal(revised.isError,undefined);
+  const one=await tool('clips_get_record',{note_id:n.id,kind:'clip',record_id:row.record_id});assert.equal(one.structuredContent.fields.thought,'修改后的想法');
+  const prepared=await tool('clips_prepare_delete',{note_id:n.id,target:{kind:'clip',record_id:row.record_id}});
+  const removed=await tool('clips_delete_record',{note_id:n.id,revision:prepared.structuredContent.revision,kind:'clip',record_id:row.record_id,confirmation_token:prepared.structuredContent.confirmation_token});
+  assert.equal(removed.isError,undefined);assert.equal(JSON.parse(await disk.read('clips.json')).notes[0].clips.length,0);
+  const whole=await tool('clips_prepare_delete',{note_id:n.id});
+  const trashed=await tool('clips_delete_note',{note_id:n.id,revision:whole.structuredContent.revision,confirmation_token:whole.structuredContent.confirmation_token});
+  assert.equal(trashed.isError,undefined);assert.ok(JSON.parse(await disk.read('clips.json')).notes[0].deletedAt);
+  const restored=await tool('clips_restore_note',{note_id:n.id,revision:trashed.structuredContent.revision});assert.equal(restored.isError,undefined);
+  assert.equal(JSON.parse(await disk.read('clips.json')).notes[0].deletedAt,null);
   data.clipsStorageTarget = { mode: 'cloud', name: 'Other' };
   const blocked = await tool('clips_search', {}); assert.equal(blocked.isError, true); assert.match(blocked.content[0].text, /LIBRARY_CHANGED/);
   await bridge.handle({ type: 'AGENT_DISCONNECT' });

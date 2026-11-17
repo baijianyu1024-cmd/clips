@@ -95,6 +95,15 @@ export function createRecordEditor({ adapter, native, active, upsert, rerender, 
   root.addEventListener("drop", e => { root.classList.remove("image-dragover"); if (!e.dataTransfer.files.length || root.querySelector(".record-edit-tools").hidden) return; e.preventDefault(); if (!busy) run(() => add([...e.dataTransfer.files])); });
   input.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); run(save); } });
   return {
+    isBusy: () => busy,
+    async forget(noteId, kind, target) {
+      if (busy) throw new Error("正在保存，请稍后再删除。");
+      if (kind === 'core') target = 'new';
+      const storageKey = kind === 'clip' ? `record-edit:${noteId}:${target}` : `content-edit:${noteId}:${kind}:${target}`;
+      await queue.catch(() => {});
+      if (session && key(session) === storageKey) { session = null; root.remove(); renderId++; for (const url of urls) URL.revokeObjectURL(url); urls.clear(); }
+      await adapter.remove(storageKey);
+    },
     async open(note, clipId, kind="clip") {
       if (busy) throw new Error("正在保存修改，请稍后再打开另一条记录。");
       if (session) await persist();

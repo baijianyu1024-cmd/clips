@@ -68,4 +68,13 @@ test('side panel edits metadata, summary and quotation while preserving reviews 
   assert.equal(document.querySelector('#thought').value, '尚未保存的写作草稿');
   const reopened = (await createFolderRepository(disk.root, target.id).request({})).notes[0];
   assert.equal(reopened.published, '2026.11'); assert.equal(reopened.reviews.length, 2);
+  let confirmation='';window.confirm=m=>{confirmation=m;return false;};
+  click('[data-action=delete-content][data-kind=clip]');await new Promise(r=>setTimeout(r,30));
+  assert.match(confirmation,/随读记录/);assert.equal((await current()).clips.length,1);
+  window.confirm=()=>true;click('[data-action=delete-content][data-kind=clip]');await until(async()=>!(await current()).clips.length);
+  assert.equal((await current()).reviews.length,2);assert.equal(document.querySelector('#thought').value,'尚未保存的写作草稿');
+  click('[data-action=delete-content][data-kind=review]');await until(async()=>(await current()).reviews.length===1);
+  click('[data-action=delete-note]');await until(async()=>!!(await current()).deletedAt);
+  await until(()=>!document.querySelector('[data-action=delete-note]'));
+  assert.equal(storage.get('draft:'+note.id).thought,'尚未保存的写作草稿');
 });
