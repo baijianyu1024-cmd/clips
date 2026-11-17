@@ -655,6 +655,7 @@ $("#composer").addEventListener("drop", event => {
 $("#thought").addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); run(saveDiscovery); } });
 $("#settings").addEventListener("close", () => { $("#api-key").value = ""; $("#supadata-key").value = ""; });
 adapter.subscribe(type => {
+  if (type === "agent-notes") refreshNotes().catch(e => notice(e.message, true));
   if (type === 'storage-target') { targetChanged = true; if (!busy) { keepDraft(); persistQueue.finally(() => location.reload()); } return; }
   if (type === "record-edit") consumeRecordEdit().catch(e => notice(e.message, true));
   if (type === "quick-quotes") { renderQuickQuotes().catch(e => notice(e.message, true)); refreshNotes().catch(e => notice(e.message, true)); }

@@ -21,4 +21,16 @@ gitleaks git --redact
 gitleaks dir dist/clips-chrome-extension --redact
 ```
 
-发布 GitHub Release 时上传 `dist/clips-chrome-extension.zip` 和 `dist/SHA256SUMS.txt`。源码 ZIP 不是用户安装包。不要将 `dist/`、`node_modules/` 或用户资料库提交进 Git。
+发布 GitHub Release 时上传 `dist/clips-chrome-extension.zip`、`dist/clips-agent.zip` 和 `dist/SHA256SUMS.txt`。源码 ZIP 不是用户安装包。不要将 `dist/`、`node_modules/` 或用户资料库提交进 Git。
+
+## Agent 接口
+
+`agent/` 是 Node MCP / CLI 与本机连接器，`extension/agent-service.js` 将固定工具映射到既有资料库接口。不得扩展成任意 fetch 或脚本执行通道，也不要直接写本地资料库绕过浏览器锁。
+
+```sh
+npm --prefix agent ci
+npm run test:agent
+npm test
+```
+
+新增工具需同步 `extension/agent-protocol.js`、验证、测试与 `docs/AGENT.md`。连接器与插件更新时应保持协议兼容，安装说明涵盖 Windows 和 Mac。测试仅使用虚构资料库，不调用付费 API。

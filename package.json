@@ -1,6 +1,6 @@
 {
   "name": "clips-browser-extension",
-  "version": "0.15.4",
+  "version": "0.16.0",
   "private": true,
   "description": "Local-folder reading notes, screenshots and contextual AI for Chrome.",
   "license": "MIT",
@@ -13,7 +13,8 @@
     "test": "node scripts/test.mjs",
     "package": "npm run build && node scripts/package.mjs",
     "check:release": "node scripts/check-parity.mjs && node scripts/check-release.mjs",
-    "check:parity": "node scripts/check-parity.mjs"
+    "check:parity": "node scripts/check-parity.mjs",
+    "test:agent": "node --test tests/agent/*.test.mjs"
   },
   "dependencies": {
     "@tiptap/core": "3.33.0",

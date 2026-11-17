@@ -10,7 +10,7 @@ assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.host_permissions?.length || 0, 0, 'No required remote host permissions');
 assert.equal(manifest.content_scripts?.length || 0, 0, 'No private-site content scripts');
 assert.equal(manifest.externally_connectable, undefined);
-const permittedOrigins = new Set(['https://api.deepseek.com/*', 'https://api.supadata.ai/*', 'https://www.youtube.com/*', 'https://youtube.com/*', 'https://m.youtube.com/*']);
+const permittedOrigins = new Set(['https://api.deepseek.com/*', 'https://api.supadata.ai/*', 'https://www.youtube.com/*', 'https://youtube.com/*', 'https://m.youtube.com/*', 'http://127.0.0.1/*']);
 assert.ok(manifest.optional_host_permissions.every(origin => permittedOrigins.has(origin)));
 
 // This catches accidental private-deployment exports, not all secrets. Run Gitleaks too.
@@ -22,7 +22,7 @@ const privatePatterns = [
   /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{24,})\b/,
 ];
 const skipped = new Set(['.git', 'node_modules', 'dist', 'coverage']);
-const forbidden = /^(?:\.env(?:\..*)?|\.openai|\.wrangler|clips\.json|backups|transcripts|images)$|\.(?:pem|key|p12|sqlite|db|zip)$/i;
+const forbidden = /^(?:\.env(?:\..*)?|\.openai|\.wrangler|\.clips-agent|connection\.json|clips\.json|backups|transcripts|images)$|\.(?:pem|key|p12|sqlite|db|zip)$/i;
 const allowed = /\.(?:js|jsx|ts|tsx|mjs|json|md|txt|css|html|png|yml|yaml)$|^(?:LICENSE|\.gitignore|\.gitattributes)$/;
 let checked = 0;
 async function walk(dir) {

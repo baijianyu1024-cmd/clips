@@ -15,3 +15,5 @@ images/
 transcripts/
 backups/
 *.zip
+.clips-agent/
+connection.json

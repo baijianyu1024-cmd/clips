@@ -89,7 +89,13 @@
     "visual-material.js",
     "youtube-content.js",
     "youtube-entry.js",
-    "youtube.js"
+    "youtube.js",
+    "agent-bridge.js",
+    "agent-protocol.js",
+    "agent-service.js",
+    "agent-ui.js",
+    "agent.css",
+    "agent.html"
   ],
   "variants": {
     "learning-local.js": {
@@ -101,7 +107,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "adapter.js": {
-      "reference": "803ad77d42ceadaa5df75a5548de4c6b7af77c65942cb7cf3f6957a95d4cf610",
+      "reference": "e2258a158627446b902cb641e808f1be9eba2652054e0b0aa6aff68a2aa0dd33",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.html": {
@@ -113,7 +119,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "background.js": {
-      "reference": "cc14bae49126edea627b462f57278bf447b2b6fda096a4a139b2f2cf7766ea02",
+      "reference": "0b035a2b6eee025d7d89bb5d93de177c65729b91c4f2c586608e035ee4e3ee3d",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "library.js": {
@@ -125,7 +131,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "panel.js": {
-      "reference": "75cbdae2735460dab97e9143e80a9e7cb595f3b4d9510d858b853e8bcf6aca8c",
+      "reference": "e3ab9cac4a214bd920270da0c7a6b9a64ef270acfd87aa63d7ea82b1211062f7",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage-target.js": {
@@ -137,7 +143,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "manifest.json": {
-      "reference": "a20100a702beab10c3c69c21e8ea7f50998025179cf57dd5226621b1d2f945e3",
+      "reference": "c93f63dad14d74d33581d3359a824bf79d92b6e39a4b2853b0c4646b2bb733ff",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.js": {
@@ -184,7 +190,7 @@
     "extension/content-edit.js": "77d015316b8739e845d45e7cf6247f8a49686272667d9c9f55e23e754f865c97",
     "extension/library-platform.js": "5062fedd38c70f6ee6d73ba9f72fa79b1cfb4e1adf2685f093aee875613f7375",
     "extension/preview.html": "b3cc3758463723cca352e2800dfea9631d845e784d21d1638f38c5e708818f38",
-    "extension/adapter.js": "2232de353fe698e694737f9d16ae5c218ccb9a94aa1b4de7bb705363018c6198",
+    "extension/adapter.js": "0289693b28fd5199f59a60bd1b0babac917e2067cc1f8470acc8a1fa64b99e2d",
     "extension/quote-context.js": "43a7482cf724f1f8c884cafeb428c86b2293b9a8c8740134b8286fb64479b3d7",
     "extension/markdown-editor.js": "046b44dffb499c42cc3645fe52f38f32d4123a7510e5944c5ab210d6ff854c2a",
     "extension/library.css": "6a30f91c4a22eb1c59f441848479a7cfeee1e3ab06761873610ed7c35ed5153d",
@@ -195,7 +201,7 @@
     "extension/youtube-entry.js": "617b5b8cbe005a347bdd26bf565221bc767aa46f125fc93284da89f30a229f3c",
     "extension/learning-engine.js": "649d1f0345c06412aca4e2a57a34851f77a083d8099514657e671fa80f8f99d6",
     "extension/core.js": "84d7cfe2878cd1c02ae0083ebe7c575fa0964e36f111cba7c1683beedd78f760",
-    "extension/background.js": "7cc8ea2c053a8882e813b41401462c7e5aa07aa3688d31fa7ce39c67133365b6",
+    "extension/background.js": "6bc8a786fd39f2a961c6b6cb85696a1ebc7d999531f3fdd1e36c9b00e8d80736",
     "extension/queue-title-sync.js": "22e0c268a2e7d84cbd8e5e654e80ece69ed6fa637ba106ebc3d1cd998a098edf",
     "extension/library-entry.jsx": "c93a1fea2f8e14e52b32e122643ea09ae6ab4d5a10258bc284b8129ae4161d5c",
     "extension/learning.html": "7d612163d73f4e8659f514e2fbb12aec0e74953637fa637081afaac45dc2ded6",
@@ -212,7 +218,7 @@
     "extension/youtube.js": "ae7aadb7844d5c02a28f42c86914621a78a33fdb6f9cfc5a3ad7ad732bb84084",
     "extension/record-editor.js": "1437419787a42e2322ecc1dc61fb4fe2486ee21e77f5f2a6e598273528220fce",
     "extension/save-context.js": "a1495dce554e2ba77016f7c7c995a1ca0ade0292a08cadd6c2c6b32ac1ec7e4a",
-    "extension/panel.js": "578d63b35d13a7cf069554fe66045666e17153b99c38494f3cf656004e017255",
+    "extension/panel.js": "ae9be8ab4353e36f3a624caa084992a00522436d9d9d9384c5f4a5a95ce8bd29",
     "extension/draft-store.js": "cb0e59d36aa568ce9c7efedf85a9df4baa0c53923f15be2b5befae622c02d8d4",
     "extension/note-fields.js": "a2c191fa3c0b7a67672544b591a8f3777add8e7b63af210b6c5689c55f265f5c",
     "extension/transcript-panel.js": "7fd4f958d1e7acd0d5966dc2887481c446717410efbe494b7bb90873f892f8ab",
@@ -223,9 +229,9 @@
     "extension/storage-target.js": "cdf5e9778b829c8d783fe0b4bfa6fce1bca341a6ac46377c83da5fe4adff66fd",
     "extension/THIRD_PARTY_NOTICES.txt": "bdd7dccb73386edcce4d0c5318af9a305b789a6c18883aed4fd5c236acf4fde8",
     "extension/page-content.js": "600639e20645ca8fbb757cab1553d5da7fd9c9c598ce2549d16d8901784540af",
-    "extension/panel.html": "21ab8439697154be8f875211a5f567beede72fce4c3791ca9d94c7fd8440d042",
+    "extension/panel.html": "5b55dad13490a7dc79426790a16983b3c48110cfbc7b7e026307bb7594b4726b",
     "extension/learning-ui.js": "6c9e48b5fe6b7f96ca04f2e1311bbce86e83c4600ed02b5ac29345c260e81476",
-    "extension/manifest.json": "42e7d4ec052cb1bbe8c2482e60f7a9356c6139ebe872906bad01870f870636db",
+    "extension/manifest.json": "20ce48c14801d1ec0c211c6d73531108ca59a058b1c6b11bf16e5a6b57d8bb51",
     "extension/stream-request.js": "e320b5fb39fda800ce9df347a6812c7be60af2807baddd3baa57cafd2da2d26a",
     "extension/transcript-service.js": "113edd0679a3d2c1be56200befaebbe9131fdc6ecbe0d840ba0917464aba670d",
     "extension/visual-material.js": "58d54cc2b7b01771c8aaeee8298e13d2facee2d3d010f2a6c099169f9aab53e0",
@@ -246,6 +252,12 @@
     "extension/vendor/rich-editor-LICENSES.txt": "569cd2564231dc1041f209f5c10fdab3bd03d98b9b3afaa7f729cb536908bf4a",
     "extension/vendor/markdown-it.mjs": "d5432491790141da046b1197353705db03264f40b5727f3b4b591f5aba193e30",
     "extension/vendor/markdown-it-LICENSE.txt": "792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473",
-    "extension/queue-links.js": "ff08f0782e8796cea59c856c7fab940db363c9021a315c896c38505d6b4f3099"
+    "extension/queue-links.js": "ff08f0782e8796cea59c856c7fab940db363c9021a315c896c38505d6b4f3099",
+    "extension/agent-bridge.js": "168e5c551c14d87f63bc218f1800b2b87a3f5f5b0a689d1ef3e628b95272faad",
+    "extension/agent-protocol.js": "08f8fc57a8c7b725b28f8f5dea3d43f5086c326d779310298bb980825d0f7e81",
+    "extension/agent-service.js": "56638561ef92cccf19c1a7f2b8fbcc1c3dda22a251cc32d1bcd5c69f30efb1c4",
+    "extension/agent-ui.js": "f463b067fa4c6b74c80a442f1d4c504ce494f4b7c018efe524d9ece3a95af66b",
+    "extension/agent.css": "b57def466bfe81f562b8fe8a22626a9b27601549e67b3c941970bce45cd1e224",
+    "extension/agent.html": "f9ca43a872fc4a287e5c94c5ddd9a52633ee8a8a02dfdcea5d069f7c8601b332"
   }
 }

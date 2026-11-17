@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Clips",
   "description": "记录阅读摘录、想法和图片，保存视频引用并回顾笔记。",
-  "version": "0.15.4",
+  "version": "0.16.0",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",
@@ -10,14 +10,16 @@
     "activeTab",
     "scripting",
     "contextMenus",
-    "tabs"
+    "tabs",
+    "alarms"
   ],
   "optional_host_permissions": [
     "https://api.deepseek.com/*",
     "https://api.supadata.ai/*",
     "https://www.youtube.com/*",
     "https://youtube.com/*",
-    "https://m.youtube.com/*"
+    "https://m.youtube.com/*",
+    "http://127.0.0.1/*"
   ],
   "background": {
     "service_worker": "background.js",

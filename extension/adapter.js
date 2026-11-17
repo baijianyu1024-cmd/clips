@@ -122,7 +122,7 @@ export const adapter = native ? {
   pending: async () => (await chrome.storage.session.get("pendingSelection")).pendingSelection || null,
   clearPending: () => chrome.storage.session.remove("pendingSelection"),
   subscribe: handler => {
-    chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes.clipsStorageTarget) handler('storage-target'); });
+    chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes.clipsStorageTarget) handler('storage-target'); if (area === 'local' && changes.clipsAgentLastWrite) handler('agent-notes'); });
     chrome.storage.onChanged.addListener((changes, area) => { if (area === "local" && Object.entries(changes).some(([k,v]) => k.endsWith("pendingRecordEdit") && v.newValue)) handler("record-edit"); if (area === "local" && Object.keys(changes).some(k=>k.endsWith("youtubeQuickQuotes"))) handler("quick-quotes"); });
     chrome.tabs.onActivated.addListener(() => handler("page"));
     chrome.tabs.onUpdated.addListener((id, change, tab) => { if (tab.active && (change.url || change.title || change.status === "complete")) handler("page"); });

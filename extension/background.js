@@ -1,3 +1,4 @@
+import { startAgentBridge } from './agent-bridge.js';
 import { createLearningEngine } from "./learning-engine.js";
 import { retainMaterial } from "./learning-capture.js";
 import { getTarget, targetKey, assertTarget, scopedStorage, folderHandle } from './storage-target.js';
@@ -161,6 +162,7 @@ function servicesFor(target) {
   const value = { storage, cloud, translateQuote, quickQuotes, learning }; services.set(id, value); return value;
 }
 async function dispatch(message,onProgress) {
+  if (['AGENT_STATUS','AGENT_PAIR','AGENT_DISCONNECT','AGENT_RECONNECT'].includes(message.type)) return agentBridge.handle(message);
   const target = await getTarget();
   if (message.context !== undefined && message.context !== targetKey(target)) throw new Error('资料库已切换，请重新打开侧栏。草稿仍保留在原资料库。');
   const { storage, cloud, translateQuote, quickQuotes, learning } = servicesFor(target);
@@ -229,7 +231,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     Promise.resolve(task).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "引用失败，请重试。" }));
     return true;
   }
-  if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html', 'learning.html', 'storage.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
+  if (sender.id !== chrome.runtime.id || !['panel.html', 'library.html', 'learning.html', 'storage.html', 'agent.html'].some(page => sender.url?.split('?')[0].split('#')[0] === chrome.runtime.getURL(page))) return false;
   dispatch(message).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || "操作失败，请重试。", status: error.status }));
   return true;
 });
@@ -251,3 +253,5 @@ chrome.runtime.onConnect.addListener(port=>{
   })().then(data=>emit({type:'result',ok:true,data})).catch(e=>emit({type:'result',ok:false,error:e.message,status:e.status}));
  });
 });
+
+const agentBridge = startAgentBridge({ request: cloudRequest, noteURL: id => chrome.runtime.getURL('library.html?note=' + id) });

@@ -38,5 +38,22 @@ const zipName = `${folder}.zip`;
 await writeFile(path.join(dist, zipName), zipped);
 const digest = createHash('sha256').update(zipped).digest('hex');
 await writeFile(path.join(dist, 'SHA256SUMS.txt'), `${digest}  ${zipName}\n`);
+// The optional Node connector is separate from the browser extension. Never bundle
+// node_modules, credentials or machine configuration; install locked dependencies.
+const agentFiles = {};
+for (const name of ['package.json', 'package-lock.json', 'config.mjs', 'client.mjs', 'broker.mjs', 'server.mjs', 'cli.mjs']) {
+  agentFiles[`clips-agent/agent/${name}`] = new Uint8Array(await readFile(path.join(root, 'agent', name)));
+}
+agentFiles['clips-agent/extension/agent-protocol.js'] = new Uint8Array(await readFile(path.join(root, 'extension/agent-protocol.js')));
+agentFiles['clips-agent/package.json'] = new TextEncoder().encode(JSON.stringify({ private: true, type: 'module' }));
+agentFiles['clips-agent/README.md'] = new Uint8Array(await readFile(path.join(root, 'docs/AGENT.md')));
+agentFiles['clips-agent/LICENSE'] = new Uint8Array(await readFile(path.join(root, 'LICENSE')));
+const agentZip = zipSync(Object.fromEntries(Object.entries(agentFiles).map(([name, data]) => [name, [data, { mtime: new Date(1980, 0, 1), level: 9 }]])));
+const agentExtracted = unzipSync(agentZip);
+for (const [name, data] of Object.entries(agentFiles)) assert.deepEqual(agentExtracted[name], data);
+await writeFile(path.join(dist, 'clips-agent.zip'), agentZip);
+const agentDigest = createHash('sha256').update(agentZip).digest('hex');
+await writeFile(path.join(dist, 'SHA256SUMS.txt'), `${digest}  ${zipName}\n${agentDigest}  clips-agent.zip\n`);
 console.log(`Packaged ${Object.keys(files).length} files; ${(zipped.length / 1024).toFixed(0)} KiB. ZIP round-trip verified.`);
 console.log(`SHA256: ${digest}`);
+console.log(`Agent connector: ${Object.keys(agentFiles).length} files; SHA256: ${agentDigest}`);
