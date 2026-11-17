@@ -4,7 +4,7 @@ import { summaryTooLong, condenseSummary, SUMMARY_GUIDANCE, CORE_SUMMARY_MAX_TOK
 
 const prose = Array.from({ length: 3 }, (_, i) => `**判断 ${i + 1}。**` + '解释关键机制与适用边界，结合实际记录理解其意义。'.repeat(9)).join('\n\n');
 test('paragraph summaries keep their reasoning without an unnecessary second model call', async () => {
-  assert.ok(prose.length > 420 && prose.length < 1000);
+  assert.ok(prose.length > 420 && prose.length < 850);
   for (const text of ['- 工具负责执行，模型负责推理。', prose, Array(6).fill('- 一条要点').join('\n')]) {
     assert.equal(summaryTooLong(text), false);
     assert.deepEqual(await condenseSummary(text, { fetcher: () => assert.fail('unnecessary model call') }), { text, warning: '' });

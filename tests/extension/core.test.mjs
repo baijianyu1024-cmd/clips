@@ -96,7 +96,9 @@ test("core summary separates personal reflections from highlights and excludes p
   assert.match(messages[0].content, /问题本身不能当成事实/);
   assert.match(messages[0].content, /原文摘录只表示关注，不代表赞同/);
   assert.match(messages[0].content, /没有个人记录时，不硬加个人感悟/);
+  assert.match(messages[0].content, /个案中的选择不能升级/);
+  assert.match(messages[0].content, /只示范提炼方式，不能将其中事实用于当前摘要/);
   assert.match(messages[0].content, /相互衔接的自然段/);
-  assert.doesNotMatch(messages[0].content, /150–250|最多 70|每条只写一句/);
+  assert.doesNotMatch(messages[0].content, /150–250|最多 70 字|每条只写一句/);
   assert.equal(JSON.parse(messages[1].content).reader_supplement, "我是否应该改变协作方式？");
 });
