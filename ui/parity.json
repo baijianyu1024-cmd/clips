@@ -97,7 +97,8 @@
     "agent-ui.js",
     "agent.css",
     "agent.html",
-    "record-actions.js"
+    "record-actions.js",
+    "summary-pipeline.js"
   ],
   "variants": {
     "learning-local.js": {
@@ -121,7 +122,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "background.js": {
-      "reference": "5ace73f8b60e494742a9da87e44fc04dcd9d22681f972c85bfd1de77904ce717",
+      "reference": "33e2ea1d56f048c9d6c91083f53e4ba05512c47436c01b2843cacca7fe71ab36",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "library.js": {
@@ -133,7 +134,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "panel.js": {
-      "reference": "312cb578f526256be0b8a28748bf010a7c25b942425c91bd4f0f4f31d864f227",
+      "reference": "c89d8438b8035915d5b9fb0b3a2f5ca21591405d9481d2c0d83b918cddec8c9f",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage-target.js": {
@@ -203,7 +204,7 @@
     "extension/youtube-entry.js": "617b5b8cbe005a347bdd26bf565221bc767aa46f125fc93284da89f30a229f3c",
     "extension/learning-engine.js": "649d1f0345c06412aca4e2a57a34851f77a083d8099514657e671fa80f8f99d6",
     "extension/core.js": "8dcf9f6ef89f5f0a526a903631c6b764ba8475831af592daec0cc35b4ecdf563",
-    "extension/background.js": "1c84ce6c6da9380d0e7daa85b4e19dc0752a032ea11ade690a181a0f2a49ed38",
+    "extension/background.js": "862e4f2b03f49a3d1e16a1472bcc5e8fe433eb8b9a411087d599c65fe344e602",
     "extension/queue-title-sync.js": "22e0c268a2e7d84cbd8e5e654e80ece69ed6fa637ba106ebc3d1cd998a098edf",
     "extension/library-entry.jsx": "c93a1fea2f8e14e52b32e122643ea09ae6ab4d5a10258bc284b8129ae4161d5c",
     "extension/learning.html": "7d612163d73f4e8659f514e2fbb12aec0e74953637fa637081afaac45dc2ded6",
@@ -220,7 +221,7 @@
     "extension/youtube.js": "ae7aadb7844d5c02a28f42c86914621a78a33fdb6f9cfc5a3ad7ad732bb84084",
     "extension/record-editor.js": "ea7c21e8f8aa9d33255549aa3010b1e6ec891e58045e7508a882ba33fbb3de6e",
     "extension/save-context.js": "a1495dce554e2ba77016f7c7c995a1ca0ade0292a08cadd6c2c6b32ac1ec7e4a",
-    "extension/panel.js": "421b74a3fe693d968f92e93451af2e4e9aa45b5ed4575cce309fc6d989dd3cb9",
+    "extension/panel.js": "83c92d8669cbb0fa8c1dbe4c7aa8d427eacaf000c7fca533219eb27c118e42e5",
     "extension/draft-store.js": "cb0e59d36aa568ce9c7efedf85a9df4baa0c53923f15be2b5befae622c02d8d4",
     "extension/note-fields.js": "a2c191fa3c0b7a67672544b591a8f3777add8e7b63af210b6c5689c55f265f5c",
     "extension/transcript-panel.js": "7fd4f958d1e7acd0d5966dc2887481c446717410efbe494b7bb90873f892f8ab",
@@ -262,6 +263,7 @@
     "extension/agent.css": "b57def466bfe81f562b8fe8a22626a9b27601549e67b3c941970bce45cd1e224",
     "extension/agent.html": "f9ca43a872fc4a287e5c94c5ddd9a52633ee8a8a02dfdcea5d069f7c8601b332",
     "ui/app/delete-record.tsx": "f0ac61a1914d75da0906c4e7c733a295203d597a9d22c6f03fcdeeb6cba8e7c9",
-    "extension/record-actions.js": "20a1741570c6119b8bc5b5dbcf9075088b331a8a29d5fb48aba9faff56ed58af"
+    "extension/record-actions.js": "20a1741570c6119b8bc5b5dbcf9075088b331a8a29d5fb48aba9faff56ed58af",
+    "extension/summary-pipeline.js": "7a132ffff98611f5297ca7cd39b424fcbac93b0c04cff8d4c7634d9d505bfbe8"
   }
 }

@@ -5,7 +5,7 @@ import { getTarget, targetKey, assertTarget, scopedStorage, folderHandle } from 
 import { createFolderRepository } from './folder-store.js';
 import { readPageContent } from "./page-content.js";
 import { captureMaterial, validImages, withImages } from "./visual-material.js";
-import { condenseSummary, summaryTooLong, CORE_SUMMARY_MAX_TOKENS } from "./summary-policy.js";
+import { generateCoreSummary } from "./summary-pipeline.js";
 import { explainReading } from "./understanding.js";
 import { createQuoteTranslator } from "./quote-translation.js";
 import { startReadingAssist, readingAssistStatus } from "./transcript-assistant.js";
@@ -102,9 +102,17 @@ async function generate(input, storage = chrome.storage.local) {
   const heartbeat = setInterval(() => chrome.runtime.getPlatformInfo(), 20000);
   try {
     await storage.set({ [storageKey]: job });
+    if (job.purpose === "core") {
+      const { text, warning } = await generateCoreSummary({ messages, model, key,
+        onProgress: progress => storage.set({ [storageKey]: { ...job, ...progress } }),
+      });
+      const record = summaryRecord(job, text);
+      await storage.set({ [storageKey]: { ...job, status: "ready", text: record.text, warning, record } });
+      return { ready: true };
+    }
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, messages, stream: true, max_tokens: input.purpose === "core" ? CORE_SUMMARY_MAX_TOKENS : 1800, temperature: 0.2, thinking: { type: "disabled" } }),
+      body: JSON.stringify({ model, messages, stream: true, max_tokens: 1800, temperature: 0.2, thinking: { type: "disabled" } }),
       signal: AbortSignal.timeout(120000), redirect: "error",
     });
     if (!response.ok) {
@@ -130,11 +138,6 @@ async function generate(input, storage = chrome.storage.local) {
     }
     if (!finish) throw new Error("连接中断，摘要尚未完整生成。请重试。");
     let warning = finish === "length" ? "已达到输出上限，摘要可能不完整。" : "";
-    if (job.purpose === "core" && (summaryTooLong(text) || finish === "length")) {
-      await storage.set({ [storageKey]: { ...job, phase: "condensing", text } });
-      const compact = await condenseSummary(text, { model, key, supplement: input.supplement, sourceMessages: messages, incomplete: finish === "length" });
-      text = compact.text; warning = compact.warning;
-    }
     const record = summaryRecord(job, text);
     await storage.set({ [storageKey]: { ...job, status: "ready", text: record.text, warning, record } });
     return { ready: true };

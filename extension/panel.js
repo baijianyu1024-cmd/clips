@@ -434,7 +434,7 @@ async function renderJob() {
   generateButton.textContent = job?.status === "ready" || aiTarget.coreSummaryId ? "重新生成" : "生成摘要";
   $("#ai-used").hidden = !job || $("#ai-used").dataset.requestId !== job.id;
   if (!job) { $("#ai-result").innerHTML = ""; return; }
-  if (job.status === "running") $("#ai-result").innerHTML = `<h3 class="spin-label">${job.phase === "condensing" ? "正在整理摘要" : "正在生成"}</h3><div class="stream">${escape(job.text)}</div>`;
+  if (job.status === "running") $("#ai-result").innerHTML = `<h3 class="spin-label">${job.phase === "planning" ? "正在提炼要点" : job.phase === "writing" || job.phase === "condensing" ? "正在整理摘要" : "正在生成"}</h3><div class="stream">${escape(job.text)}</div>`;
   else if (job.status === "error") $("#ai-result").innerHTML = `<p class="hint">${escape(job.error)}</p>`;
   else if (job.status === "ready") {
     if ($("#ai-result").dataset.job === job.id && $("#ai-output")) return;

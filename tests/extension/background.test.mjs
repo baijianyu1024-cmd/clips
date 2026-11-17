@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+
+const plan = {subject:'测试主题',main:{claim:'工作重心改变',reason:'执行减少而判断增加',evidence:'更多时间用于判断'},mechanism:null,connection:null};
+const planningResponse = () => Response.json({choices:[{message:{content:JSON.stringify(plan)},finish_reason:'stop'}]});
+const writingResponse = (body='只改变工作重心，不等于损耗转移。',finish='stop') => new Response('data: '+JSON.stringify({choices:[{delta:{content:JSON.stringify({paragraphs:[{heading:'工作重心改变',body}]})},finish_reason:finish}]})+'\n\ndata: [DONE]\n\n');
+
 const local = {}, session = {}, listeners = {};
 function storage(data) { return { setAccessLevel: async () => {}, get: async keys => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(k => [k, data[k]])), set: async values => Object.assign(data, structuredClone(values)), remove: async key => { delete data[key]; } }; }
 const event = name => ({ addListener: f => { listeners[name] = f; } });
@@ -47,7 +52,7 @@ test("AI request uses only the chosen material and preserves original note targe
 });
 test("core generation keeps its destination and expected summary version across tab switches", async () => {
   let payload;
-  globalThis.fetch = async (_url, init) => { payload = JSON.parse(init.body); return new Response('data: {"choices":[{"delta":{"content":"核心摘要测试"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'); };
+  globalThis.fetch = async (_url, init) => { payload = JSON.parse(init.body); return payload.stream ? writingResponse() : planningResponse(); };
   local.activeNoteId = "another-note";
   const result = await dispatch({ type: "AI_GENERATE", input: { id: "core-job", noteId: "core-note", sourceUrl: "https://example.com/core", text: "正文与我的想法", scope: "正文 + 记录", purpose: "core", expectedCoreSummaryId: "previous-summary" } });
   assert.equal(result.ok, true); assert.equal(local["unconfigured:aiJob:core-note"].purpose, "core");
@@ -77,7 +82,7 @@ test("understanding requires only the reading question and never persists a note
 });
 test('summary sends inline vision context through Flash without persisting captured images', async () => {
   session.apiKey = 'FAKE_VISION_TEST'; let body;
-  globalThis.fetch = async (_url, init) => { body = JSON.parse(init.body); return new Response('data: {"choices":[{"delta":{"content":"图中结构"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'); };
+  globalThis.fetch = async (_url, init) => { body = JSON.parse(init.body); return body.stream ? writingResponse() : planningResponse(); };
   const result = await dispatch({type:'AI_GENERATE',input:{id:'visual-job',noteId:'visual-note',sourceUrl:'https://example.com/a',text:'说明图片',supplement:'关注图中依赖关系',scope:'当前图像',purpose:'core',images:[{dataUrl:'data:image/png;base64,AAAA',label:'画板'}]}});
   assert.equal(result.ok,true); assert.equal(body.model,'deepseek-flash'); assert.equal(body.messages[1].content[2].type,'image_url');
   const material = JSON.parse(body.messages[1].content[0].text);
@@ -112,36 +117,24 @@ test('stream ports reject foreign pages, forbidden actions and stale storage con
 });
 
 
-test('core generation gives reasoned paragraphs room and does not flatten them', async () => {
-  session.apiKey = 'FAKE_CORE_POLICY_TEST'; let calls = 0;
-  const prose = '**主线。**' + '这是有依据的因果说明，保留必要边界与个人理解。'.repeat(30);
-  globalThis.fetch = async (_url, init) => {
-    calls++; const payload = JSON.parse(init.body);
-    assert.equal(payload.max_tokens, 2200);
-    assert.match(payload.messages[0].content, /个人理解必须有记录依据/);
-    assert.match(payload.messages[0].content, /围绕主线解释/);
-    return new Response('data: ' + JSON.stringify({choices:[{delta:{content:prose},finish_reason:'stop'}]}) + '\n\ndata: [DONE]\n\n');
+test('core generation makes two requests and persists only the rendered result', async () => {
+  session.apiKey = 'FAKE_CORE_POLICY_TEST'; let calls=0,first;
+  globalThis.fetch = async (_url,init) => {
+    const body=JSON.parse(init.body);calls++;
+    if(calls===1){first=body;assert.equal(body.stream,false);return planningResponse();}
+    assert.equal(body.stream,true);assert.deepEqual(body.messages[1],first.messages[1]);
+    return writingResponse();
   };
-  const result = await dispatch({type:'AI_GENERATE',input:{id:'prose-job',noteId:'prose-note',sourceUrl:'https://example.com/a',text:'文章正文与个人记录',purpose:'core'}});
-  assert.equal(result.ok, true); assert.equal(calls, 1);
-  assert.equal(local['unconfigured:aiJob:prose-note'].record.text, prose);
-  assert.equal(local['unconfigured:aiJob:prose-note'].status, 'ready'); delete session.apiKey;
+  const result=await dispatch({type:'AI_GENERATE',input:{id:'two-job',noteId:'two-note',sourceUrl:'https://example.com/a',text:'原始材料核对',purpose:'core'}});
+  assert.equal(result.ok,true);assert.equal(calls,2);
+  const job=local['unconfigured:aiJob:two-note'];assert.equal(job.status,'ready');
+  assert.equal(job.record.text,'**工作重心改变** 只改变工作重心，不等于损耗转移。');
+  assert.doesNotMatch(JSON.stringify(job),/FAKE_CORE_POLICY_TEST|原始材料核对|reader_basis|selected_outline/);delete session.apiKey;
 });
-test('truncated core generation refines from original materials without storing request images or keys', async () => {
-  session.apiKey = 'FAKE_CORE_RECOVERY_TEST'; let calls = 0, first;
-  globalThis.fetch = async (_url, init) => {
-    const payload = JSON.parse(init.body);
-    if (++calls === 1) {
-      first = payload;
-      return new Response('data: ' + JSON.stringify({choices:[{delta:{content:'被截断的初稿'},finish_reason:'length'}]}) + '\n\ndata: [DONE]\n\n');
-    }
-    assert.equal(payload.stream, false); assert.deepEqual(payload.messages[1], first.messages[1]);
-    assert.match(payload.messages[0].content, /以原始材料为准/);
-    return Response.json({choices:[{message:{content:'**完整主线。** 结合记录解释其原因与边界。'},finish_reason:'stop'}]});
-  };
-  const result = await dispatch({type:'AI_GENERATE',input:{id:'recover-job',noteId:'recover-note',sourceUrl:'https://example.com/a',text:'完整原文与记录',supplement:'关注协作',purpose:'core',images:[{dataUrl:'data:image/png;base64,AAAA',label:'配图'}]}});
-  assert.equal(result.ok,true); assert.equal(calls,2);
-  const job = local['unconfigured:aiJob:recover-note'];
-  assert.equal(job.record.text,'**完整主线。** 结合记录解释其原因与边界。');
-  assert.doesNotMatch(JSON.stringify(job),/FAKE_CORE_RECOVERY_TEST|data:image|完整原文与记录/); delete session.apiKey;
+test('truncated final summary never becomes a saveable result or triggers a third request',async()=>{
+  session.apiKey='FAKE_CORE_INTERRUPTED_TEST';let calls=0;
+  globalThis.fetch=async()=> ++calls===1 ? planningResponse() : writingResponse('未完成','length');
+  const result=await dispatch({type:'AI_GENERATE',input:{id:'cut-job',noteId:'cut-note',sourceUrl:'https://example.com/a',text:'材料',purpose:'core',expectedCoreSummaryId:'saved-before'}});
+  assert.equal(result.ok,false);assert.equal(calls,2);assert.match(result.error,/未完整/);
+  const job=local['unconfigured:aiJob:cut-note'];assert.equal(job.status,'error');assert.equal(job.record,undefined);assert.equal(job.expectedCoreSummaryId,'saved-before');delete session.apiKey;
 });
