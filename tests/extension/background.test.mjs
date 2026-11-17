@@ -110,3 +110,38 @@ test('stream ports reject foreign pages, forbidden actions and stale storage con
  const p=port(own);p.send({type:'CONFIG_GET'});await new Promise(r=>setImmediate(r));assert.equal(p.out[0].ok,false);
  const stale=port(own);stale.send({type:'UNDERSTAND',context:'other-folder',input:{question:'问题'}});await new Promise(r=>setImmediate(r));assert.match(stale.out[0].error,/资料库已切换/);
 });
+
+
+test('core generation gives reasoned paragraphs room and does not flatten them', async () => {
+  session.apiKey = 'FAKE_CORE_POLICY_TEST'; let calls = 0;
+  const prose = '**主线。**' + '这是有依据的因果说明，保留必要边界与个人理解。'.repeat(30);
+  globalThis.fetch = async (_url, init) => {
+    calls++; const payload = JSON.parse(init.body);
+    assert.equal(payload.max_tokens, 2200);
+    assert.match(payload.messages[0].content, /个人理解必须有记录依据/);
+    assert.match(payload.messages[0].content, /围绕主线解释/);
+    return new Response('data: ' + JSON.stringify({choices:[{delta:{content:prose},finish_reason:'stop'}]}) + '\n\ndata: [DONE]\n\n');
+  };
+  const result = await dispatch({type:'AI_GENERATE',input:{id:'prose-job',noteId:'prose-note',sourceUrl:'https://example.com/a',text:'文章正文与个人记录',purpose:'core'}});
+  assert.equal(result.ok, true); assert.equal(calls, 1);
+  assert.equal(local['unconfigured:aiJob:prose-note'].record.text, prose);
+  assert.equal(local['unconfigured:aiJob:prose-note'].status, 'ready'); delete session.apiKey;
+});
+test('truncated core generation refines from original materials without storing request images or keys', async () => {
+  session.apiKey = 'FAKE_CORE_RECOVERY_TEST'; let calls = 0, first;
+  globalThis.fetch = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (++calls === 1) {
+      first = payload;
+      return new Response('data: ' + JSON.stringify({choices:[{delta:{content:'被截断的初稿'},finish_reason:'length'}]}) + '\n\ndata: [DONE]\n\n');
+    }
+    assert.equal(payload.stream, false); assert.deepEqual(payload.messages[1], first.messages[1]);
+    assert.match(payload.messages[0].content, /以原始材料为准/);
+    return Response.json({choices:[{message:{content:'**完整主线。** 结合记录解释其原因与边界。'},finish_reason:'stop'}]});
+  };
+  const result = await dispatch({type:'AI_GENERATE',input:{id:'recover-job',noteId:'recover-note',sourceUrl:'https://example.com/a',text:'完整原文与记录',supplement:'关注协作',purpose:'core',images:[{dataUrl:'data:image/png;base64,AAAA',label:'配图'}]}});
+  assert.equal(result.ok,true); assert.equal(calls,2);
+  const job = local['unconfigured:aiJob:recover-note'];
+  assert.equal(job.record.text,'**完整主线。** 结合记录解释其原因与边界。');
+  assert.doesNotMatch(JSON.stringify(job),/FAKE_CORE_RECOVERY_TEST|data:image|完整原文与记录/); delete session.apiKey;
+});

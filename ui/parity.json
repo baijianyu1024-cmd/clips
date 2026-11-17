@@ -117,11 +117,11 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "core.js": {
-      "reference": "b2db68d2555a68dd08309b7441e852150d8441c07afed6b035afcce501486e5a",
+      "reference": "297e888630f4d034caba2a6118d8333f18d5576951b6099cdd965ec0c2b92965",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "background.js": {
-      "reference": "0b035a2b6eee025d7d89bb5d93de177c65729b91c4f2c586608e035ee4e3ee3d",
+      "reference": "5ace73f8b60e494742a9da87e44fc04dcd9d22681f972c85bfd1de77904ce717",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "library.js": {
@@ -133,7 +133,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "panel.js": {
-      "reference": "4e4ff621044cb31a87251b67f393b3080adc7ff674e981210246e8b426760c9b",
+      "reference": "312cb578f526256be0b8a28748bf010a7c25b942425c91bd4f0f4f31d864f227",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage-target.js": {
@@ -145,7 +145,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "manifest.json": {
-      "reference": "12725535f398539ab191a9e673d587df58b071c3f12a8fa010c39a5f44d069de",
+      "reference": "d1d8dc1b65a1a4010114d931f7085acf2b2f677f499c21157579d02ca6f642a7",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.js": {
@@ -202,8 +202,8 @@
     "extension/link-metadata.js": "c2729bd147d56e8d9ada5273da200e7a88e9c257ea95c28d6253c67e4daa9f4b",
     "extension/youtube-entry.js": "617b5b8cbe005a347bdd26bf565221bc767aa46f125fc93284da89f30a229f3c",
     "extension/learning-engine.js": "649d1f0345c06412aca4e2a57a34851f77a083d8099514657e671fa80f8f99d6",
-    "extension/core.js": "84d7cfe2878cd1c02ae0083ebe7c575fa0964e36f111cba7c1683beedd78f760",
-    "extension/background.js": "6bc8a786fd39f2a961c6b6cb85696a1ebc7d999531f3fdd1e36c9b00e8d80736",
+    "extension/core.js": "8dcf9f6ef89f5f0a526a903631c6b764ba8475831af592daec0cc35b4ecdf563",
+    "extension/background.js": "1c84ce6c6da9380d0e7daa85b4e19dc0752a032ea11ade690a181a0f2a49ed38",
     "extension/queue-title-sync.js": "22e0c268a2e7d84cbd8e5e654e80ece69ed6fa637ba106ebc3d1cd998a098edf",
     "extension/library-entry.jsx": "c93a1fea2f8e14e52b32e122643ea09ae6ab4d5a10258bc284b8129ae4161d5c",
     "extension/learning.html": "7d612163d73f4e8659f514e2fbb12aec0e74953637fa637081afaac45dc2ded6",
@@ -220,7 +220,7 @@
     "extension/youtube.js": "ae7aadb7844d5c02a28f42c86914621a78a33fdb6f9cfc5a3ad7ad732bb84084",
     "extension/record-editor.js": "ea7c21e8f8aa9d33255549aa3010b1e6ec891e58045e7508a882ba33fbb3de6e",
     "extension/save-context.js": "a1495dce554e2ba77016f7c7c995a1ca0ade0292a08cadd6c2c6b32ac1ec7e4a",
-    "extension/panel.js": "6e6ef08e99d6f95feb4f630c370a969d20cbfa92fb104d9358808d4fee92a984",
+    "extension/panel.js": "421b74a3fe693d968f92e93451af2e4e9aa45b5ed4575cce309fc6d989dd3cb9",
     "extension/draft-store.js": "cb0e59d36aa568ce9c7efedf85a9df4baa0c53923f15be2b5befae622c02d8d4",
     "extension/note-fields.js": "a2c191fa3c0b7a67672544b591a8f3777add8e7b63af210b6c5689c55f265f5c",
     "extension/transcript-panel.js": "7fd4f958d1e7acd0d5966dc2887481c446717410efbe494b7bb90873f892f8ab",
@@ -231,9 +231,9 @@
     "extension/storage-target.js": "cdf5e9778b829c8d783fe0b4bfa6fce1bca341a6ac46377c83da5fe4adff66fd",
     "extension/THIRD_PARTY_NOTICES.txt": "bdd7dccb73386edcce4d0c5318af9a305b789a6c18883aed4fd5c236acf4fde8",
     "extension/page-content.js": "600639e20645ca8fbb757cab1553d5da7fd9c9c598ce2549d16d8901784540af",
-    "extension/panel.html": "ba561a2e0436e3650409e3f6503cdfb14510538d991467b7acc53def03338c03",
+    "extension/panel.html": "4cd2f858ca68c13184fdc47ac49fa565553aaa87aa5ac7cd23eac826cff4964f",
     "extension/learning-ui.js": "6c9e48b5fe6b7f96ca04f2e1311bbce86e83c4600ed02b5ac29345c260e81476",
-    "extension/manifest.json": "b223c8892bd44f8ea0d53d770266a35c4876fe746c2367af19fdb7771e3ff139",
+    "extension/manifest.json": "c42394333b062e7c41425a93c9fd0ca330a2a687618e96346a8f748656fdf14d",
     "extension/stream-request.js": "e320b5fb39fda800ce9df347a6812c7be60af2807baddd3baa57cafd2da2d26a",
     "extension/transcript-service.js": "113edd0679a3d2c1be56200befaebbe9131fdc6ecbe0d840ba0917464aba670d",
     "extension/visual-material.js": "58d54cc2b7b01771c8aaeee8298e13d2facee2d3d010f2a6c099169f9aab53e0",
@@ -243,7 +243,7 @@
     "extension/learning-retrieval.js": "59303611028a5b8763b83681761258c428c4ad9bf10de9c4e24e3d061a14fa87",
     "extension/image-drafts.js": "662a44b6f0f2f64847a59904a7b010ad670c32c4c5e6b8e740b3c5e45e098a95",
     "extension/panel.css": "cd3227ac3d4da14b6de503c55c3578d9549b62369d036124c3dd7eaedcb4bb23",
-    "extension/summary-policy.js": "25d0605928432590124af7ec853918661c76caf8e8c299392a7d609a690472ed",
+    "extension/summary-policy.js": "951142733c7f9a98178e26bf8602e4b503b788ab8564de977e88dc7df3f338b4",
     "extension/storage.js": "76d73d786b72c3fac73143880a90179d314847c6dd4ad2e3f7c52a03c8946213",
     "extension/markdown.js": "9c676d5b1910197d4acae2be92665eacf7ccc086203b272a167336089ca27c6f",
     "extension/icons/128.png": "7724f4dd5821469aafb888146146a1de563daf18b3e4170a9baf941ccac745ef",

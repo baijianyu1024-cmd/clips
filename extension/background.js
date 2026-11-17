@@ -5,7 +5,7 @@ import { getTarget, targetKey, assertTarget, scopedStorage, folderHandle } from 
 import { createFolderRepository } from './folder-store.js';
 import { readPageContent } from "./page-content.js";
 import { captureMaterial, validImages, withImages } from "./visual-material.js";
-import { condenseSummary, summaryTooLong } from "./summary-policy.js";
+import { condenseSummary, summaryTooLong, CORE_SUMMARY_MAX_TOKENS } from "./summary-policy.js";
 import { explainReading } from "./understanding.js";
 import { createQuoteTranslator } from "./quote-translation.js";
 import { startReadingAssist, readingAssistStatus } from "./transcript-assistant.js";
@@ -104,7 +104,7 @@ async function generate(input, storage = chrome.storage.local) {
     await storage.set({ [storageKey]: job });
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, messages, stream: true, max_tokens: input.purpose === "core" ? 1000 : 1800, temperature: 0.2, thinking: { type: "disabled" } }),
+      body: JSON.stringify({ model, messages, stream: true, max_tokens: input.purpose === "core" ? CORE_SUMMARY_MAX_TOKENS : 1800, temperature: 0.2, thinking: { type: "disabled" } }),
       signal: AbortSignal.timeout(120000), redirect: "error",
     });
     if (!response.ok) {
@@ -132,7 +132,7 @@ async function generate(input, storage = chrome.storage.local) {
     let warning = finish === "length" ? "已达到输出上限，摘要可能不完整。" : "";
     if (job.purpose === "core" && (summaryTooLong(text) || finish === "length")) {
       await storage.set({ [storageKey]: { ...job, phase: "condensing", text } });
-      const compact = await condenseSummary(text, { model, key, supplement: input.supplement, incomplete: finish === "length" });
+      const compact = await condenseSummary(text, { model, key, supplement: input.supplement, sourceMessages: messages, incomplete: finish === "length" });
       text = compact.text; warning = compact.warning;
     }
     const record = summaryRecord(job, text);

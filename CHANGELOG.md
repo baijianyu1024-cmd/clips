@@ -2,6 +2,15 @@
 
 按版本倒序记录已发布的功能、改进、修复与升级事项。日期采用 GitHub Release 发布日期。安装包见 [GitHub Releases](https://github.com/baijianyu1024-cmd/clips/releases)，更新步骤见 [README](README.md#更新)。
 
+## [0.17.2](https://github.com/baijianyu1024-cmd/clips/releases/tag/v0.17.2) · 2026-11-17
+
+核心摘要质量调整
+
+- 摘要围绕核心主张、形成原因和适用边界展开，使用自然段与 Markdown 加粗，不再逐条压缩细节。
+- 结合随读想法、补充理解和本次补充提炼有依据的认识，区分摘录、个人判断与进一步推论；没有个人记录时不编造感悟。
+- 取消固定 150–250 字及单句限制，正常篇幅不再触发二次压缩；输出截断时依据原始材料重整，失败则保留初稿并提示。
+- 更新后重载插件，再点击「重新生成」使用新版规则；已保存摘要保持原样。Agent 连接器无需更新或重新配对。
+
 ## [0.17.1](https://github.com/baijianyu1024-cmd/clips/releases/tag/v0.17.1) · 2026-11-17
 
 记录操作按钮对齐

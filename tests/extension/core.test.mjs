@@ -77,3 +77,26 @@ test("notes-only and oversized materials explicitly disclose missing or limited 
   assert.ok(long.text.length <= 40000); assert.match(long.scope, /截断/);
   assert.throws(() => coreMaterial({ sources: [], clips: [] }));
 });
+
+
+test("core summary separates personal reflections from highlights and excludes past AI conclusions", () => {
+  const note = {
+    sources: [], thought: "我更关注交接成本", summary: "旧摘录",
+    clips: [{ text: "shared context", translation: { text: "共享上下文" }, thought: "要能接着同一任务工作" }],
+    reviews: [{ text: "后来发现只有信息共享还不够，需要交代决策原因" }, { text: "" }],
+    coreSummary: { text: "旧 AI 摘要不要循环作为材料" }, aiSummaries: [{text:"另一个旧 AI 摘要"}],
+  };
+  const material = coreMaterial(note, { text: "案例正文" });
+  assert.match(material.text, /原文摘录：\nshared context/);
+  assert.match(material.text, /摘录译文：\n共享上下文/);
+  assert.match(material.text, /我的想法：\n要能接着同一任务工作/);
+  assert.match(material.text, /后来的理解 1：\n后来发现/);
+  assert.doesNotMatch(material.text, /旧 AI 摘要/);
+  const messages = buildPrompt(material.text, material.scope, "测试", "core", "我是否应该改变协作方式？");
+  assert.match(messages[0].content, /问题本身不能当成事实/);
+  assert.match(messages[0].content, /原文摘录只表示关注，不代表赞同/);
+  assert.match(messages[0].content, /没有个人记录时，不硬加个人感悟/);
+  assert.match(messages[0].content, /相互衔接的自然段/);
+  assert.doesNotMatch(messages[0].content, /150–250|最多 70|每条只写一句/);
+  assert.equal(JSON.parse(messages[1].content).reader_supplement, "我是否应该改变协作方式？");
+});
