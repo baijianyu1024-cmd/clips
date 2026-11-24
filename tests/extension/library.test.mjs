@@ -12,6 +12,7 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  // Start from that on-disk format, not only notes created by this UI.
  const seeded=(await repo.request({method:'POST',body:{id:crypto.randomUUID(),fields:{title:'侧栏 AI 摘要兼容验证'}}})).note;
  const legacy=JSON.parse(await disk.read('clips.json'));
+ legacy.notes[0].published='2024.2.19';
  legacy.notes[0].coreSummary={id:crypto.randomUUID(),text:'- 从侧栏保存的纯文字摘要',origin:'ai',scope:'原文与随读记录',provider:'DeepSeek',model:'deepseek-flash',createdAt:seeded.createdAt};
  legacy.notes[0].coreSummaryHistory=[{...legacy.notes[0].coreSummary,id:crypto.randomUUID(),text:'上一版纯文字摘要'}];
  await disk.write('clips.json',JSON.stringify(legacy));
@@ -29,7 +30,20 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  const input=(selector,value)=>{const el=$(selector);assert.ok(el,selector);const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));};
  const submit=selector=>$(selector).dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
  const pause=()=>new Promise(r=>setTimeout(r,40));
- await until(()=>!!$('.library-record')&&document.body.textContent.includes('从侧栏保存的纯文字摘要'));
+ await until(()=>!!$('.shelf-card'));
+ assert.ok($('.shelf-section[aria-label="继续阅读"] .shelf-card'));
+ assert.ok(!$('.library-home').textContent.includes('从侧栏保存的纯文字摘要'));
+ assert.ok($('.shelf-published').textContent.includes('2024'));
+ $('.shelf-edit').click();await until(()=>$('dialog.editor-modal input[type="month"]'));
+ assert.equal($('dialog.editor-modal input[type="month"]').value,'2024-02');
+ input('dialog.editor-modal [aria-label="笔记标题"]','侧栏 AI 摘要兼容验证（已改名）');await pause();submit('dialog.editor-modal form');
+ await until(()=>!$('dialog.editor-modal')&&!!$('.shelf-card'));
+ assert.equal((await repo.request()).notes[0].published,'2024.2.19');
+ $('.shelf-edit').click();await until(()=>$('dialog.editor-modal input[type="month"]'));
+ input('dialog.editor-modal input[type="month"]','2025-03');await pause();submit('dialog.editor-modal form');
+ await until(()=>!$('dialog.editor-modal')&&!!$('.shelf-card'));
+ assert.equal((await repo.request()).notes[0].published,'2025-03');
+ clickText('全部记录');await until(()=>!!$('.library-record')&&document.body.textContent.includes('从侧栏保存的纯文字摘要'));
  $('.new-note').click();await until(()=>$('dialog.editor-modal'));
  input('.title-input','共享界面验证');await pause();submit('dialog.editor-modal form');await until(()=>!$('dialog.editor-modal'));
  let note=(await repo.request()).notes[0];assert.equal(note.title,'共享界面验证');

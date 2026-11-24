@@ -2,6 +2,11 @@
 
 按版本倒序记录已发布的功能、改进、修复与升级事项。日期采用 GitHub Release 发布日期。安装包见 [GitHub Releases](https://github.com/baijianyu1024-cmd/clips/releases)，更新步骤见 [README](README.md#更新)。
 
+## 待发布
+
+- 笔记库默认按篇浏览。「继续阅读」和「已读完」各自显示固定高度的卡片，保留顶部搜索与筛选。打开卡片可查看笔记详情和随读记录，卡片右上角可编辑基础信息或确认删除。
+- 在笔记库添加或编辑笔记时，发布时间可选到年月。历史记录保留原有日期精度，仅有年份的笔记只显示年份。
+
 ## [0.17.2](https://github.com/baijianyu1024-cmd/clips/releases/tag/v0.17.2) · 2026-11-17
 
 核心摘要：先提炼，再成文
