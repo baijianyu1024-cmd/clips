@@ -9,3 +9,17 @@
 @media(max-width:520px){.sidebar-bottom{flex-wrap:wrap}.sidebar-bottom .nav-item{font-size:12px;padding:6px}.sidebar .nav-item{gap:6px}}
 
 .storage-page{display:block}.storage-page .sidebar,.storage-page .toolbar{display:none}.storage-page main{max-width:900px;margin:auto}
+
+.storage-page main.desk-utility { max-width: 60rem; }
+.storage-page #setup { max-width: none; margin: 0; }
+.storage-page #setup h2 { font-size: 15px; }
+.storage-page :is(#setup, #settings) > details {
+  margin: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.storage-page :is(#setup, #settings) p { overflow-wrap: anywhere; }
+.storage-page :is(#setup, #settings) .utility-actions + p { margin-top: 10px; }
+.storage-page #current-folder { display: block; margin-bottom: 8px; }
+.storage-page #settings-error { color: var(--ink); }
+.storage-page #settings-error:empty { display: none; }

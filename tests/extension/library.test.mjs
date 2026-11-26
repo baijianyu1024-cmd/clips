@@ -12,6 +12,7 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  // Start from that on-disk format, not only notes created by this UI.
  const seeded=(await repo.request({method:'POST',body:{id:crypto.randomUUID(),fields:{title:'侧栏 AI 摘要兼容验证'}}})).note;
  const legacy=JSON.parse(await disk.read('clips.json'));
+ legacy.notes[0].published='2024.2.19';
  legacy.notes[0].coreSummary={id:crypto.randomUUID(),text:'- 从侧栏保存的纯文字摘要',origin:'ai',scope:'原文与随读记录',provider:'DeepSeek',model:'deepseek-flash',createdAt:seeded.createdAt};
  legacy.notes[0].coreSummaryHistory=[{...legacy.notes[0].coreSummary,id:crypto.randomUUID(),text:'上一版纯文字摘要'}];
  await disk.write('clips.json',JSON.stringify(legacy));
@@ -29,8 +30,31 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  const input=(selector,value)=>{const el=$(selector);assert.ok(el,selector);const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));};
  const submit=selector=>$(selector).dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
  const pause=()=>new Promise(r=>setTimeout(r,40));
- await until(()=>!!$('.library-record')&&document.body.textContent.includes('从侧栏保存的纯文字摘要'));
- $('.new-note').click();await until(()=>$('dialog.editor-modal'));
+ await until(()=>!!$('.shelf-card'));
+ assert.ok($('.shelf-section[aria-label="继续阅读"] .shelf-card'));
+ assert.ok(!$('.library-home').textContent.includes('从侧栏保存的纯文字摘要'));
+ assert.ok($('.shelf-published').textContent.includes('2024'));
+ assert.equal($('.shelf-status[data-last-read="true"]'), null);
+ $('.shelf-card').click();await until(()=>!!$('.note-detail'));
+ $('[aria-label="返回列表"]').click();
+ await until(()=>$('.shelf-status[data-last-read="true"]')?.textContent.includes('上次阅读'));
+ async function editShelfNote() {
+   $('.shelf-more').click();
+   await until(()=>!!$('.shelf-edit'));
+   $('.shelf-edit').click();
+   await until(()=>!!$('dialog.editor-modal input[type="month"]'));
+ }
+ await editShelfNote();
+ assert.equal($('dialog.editor-modal input[type="month"]').value,'2024-02');
+ input('dialog.editor-modal [aria-label="笔记标题"]','侧栏 AI 摘要兼容验证（已改名）');await pause();submit('dialog.editor-modal form');
+ await until(()=>!$('dialog.editor-modal')&&!!$('.shelf-card'));
+ assert.equal((await repo.request()).notes[0].published,'2024.2.19');
+ await editShelfNote();
+ input('dialog.editor-modal input[type="month"]','2025-03');await pause();submit('dialog.editor-modal form');
+ await until(()=>!$('dialog.editor-modal')&&!!$('.shelf-card'));
+ assert.equal((await repo.request()).notes[0].published,'2025-03');
+ clickText('全部记录');await until(()=>!!$('.library-record')&&document.body.textContent.includes('从侧栏保存的纯文字摘要'));
+ $('.library-add').click();await until(()=>$('dialog.editor-modal'));
  input('.title-input','共享界面验证');await pause();submit('dialog.editor-modal form');await until(()=>!$('dialog.editor-modal'));
  let note=(await repo.request()).notes[0];assert.equal(note.title,'共享界面验证');
  // Detail entry uses the same records UI as the hosted notebook.
@@ -54,10 +78,40 @@ test('shared library UI writes actual files: create, records, summary, drafts, t
  await until(()=>!$('.reading-log [aria-label="删除记录"]'));assert.equal((await repo.request()).notes[0].clips.length,0);
  assert.equal((await repo.request()).notes[0].coreSummary.text,'- 简洁的核心摘要');
  window.confirm=()=>false;clickText('删除笔记');await pause();assert.equal((await repo.request()).notes[0].deletedAt,null);
- window.confirm=()=>true;clickText('删除笔记');await until(()=>document.querySelector('.note-detail')?.textContent.includes('侧栏 AI 摘要兼容验证'));
+ window.confirm=()=>true;clickText('删除笔记');await until(()=>!$('.note-detail') && !!$('.library-heading'));
  assert.ok((await repo.request()).notes.find(n=>n.id===note.id).deletedAt);
- clickText('已删除');await until(()=>document.querySelector('.note-detail')?.textContent.includes('共享界面验证'));
+ clickText('已删除');
+ await until(()=>!!$('.shelf-card[aria-label="打开《共享界面验证》"]'));
+ $('.shelf-card[aria-label="打开《共享界面验证》"]').click();
+ await until(()=>$('.note-detail')?.textContent.includes('共享界面验证'));
  clickText('恢复');await pause();assert.equal((await repo.request()).notes.find(n=>n.id===note.id).deletedAt,null);
+ // A sidebar tag remains the destination while record tabs and optional filters change.
+ const tagButton = () => $('.sidebar .topic[title="已改名"]');
+ tagButton().click();
+ await until(() => $('.library-heading h1')?.textContent === '# 已改名');
+ clickText('全部记录');await pause();clickText('想法');await pause();
+ await until(() => $('.record-filters [aria-pressed="true"]')?.textContent === '想法');
+ tagButton().click();
+ $('.library-filter-menu input[type="checkbox"]').click();
+ await until(() => !!$('.reset-shelf-filters'));
+ $('.reset-shelf-filters').click();await pause();
+ assert.equal(tagButton().getAttribute('aria-current'),'page');
+ assert.equal(all('.sidebar [aria-current="page"]').length,1);
+ assert.equal($('.record-filters [aria-pressed="true"]').textContent,'想法');
+ assert.equal(new URLSearchParams(location.search).get('tag'),'已改名');
+ assert.equal($('.reset-shelf-filters'),null);
+ // The active destination preselects a removable tag for each new note.
+ for (const remove of [false, true]) {
+   clickText('新建笔记', $('.library-heading'));
+   await until(() => $('dialog[aria-label="新建笔记"] [aria-label="移除标签 已改名"]'));
+   const title = remove ? '移除默认标签的笔记' : '保留默认标签的笔记';
+   if (remove) $('[aria-label="移除标签 已改名"]').click();
+   input('.title-input',title);await pause();submit('dialog.editor-modal form');
+   await until(() => $('.note-title')?.textContent === title);
+   assert.deepEqual((await reopened.request()).notes.find(n => n.title === title).tags,remove ? [] : ['已改名']);
+   $('[aria-label="返回列表"]').click();
+   await until(() => $('.library-heading h1')?.textContent === '# 已改名');
+ }
  // Unmount to remove polling timers before closing the DOM.
  dom.window.close();
 });

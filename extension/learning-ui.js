@@ -8,13 +8,32 @@ export function mountLearning(root,api){
  const drafts=createDraftStore(api.draftStorage||browserDraftStorage(root.ownerDocument.defaultView));
  let previewKey='',restoreId=0,previewRevision=0,questionRevision=0;
  const $=q=>root.querySelector(q),noteURL=id=>api.noteURL(id),number=id=>(chat?.materials.findIndex(m=>m.id===id)??-1)+1;
- root.innerHTML=`<div class="learn-shell"><main class="learn-main"><header class="learn-header"><h1 id="learn-title">新对话</h1><div class="learn-header-actions"><button data-action="resume-preview" hidden>笔记预览</button><button data-action="scope" id="learn-scope">全部笔记 ▾</button><button data-action="history" aria-label="对话历史" aria-expanded="false">历史</button></div></header><div id="learn-notice" role="status" hidden></div><div id="learn-turns" class="learn-turns" aria-live="polite"></div><form id="learn-form" class="learn-composer"><label class="learn-sr" for="learn-question">问题</label><textarea id="learn-question" rows="2" maxlength="4000" placeholder="输入问题"></textarea><div><span class="learn-muted" id="learn-progress"></span><button class="learn-primary" type="submit" id="learn-send">发送 ↑</button></div></form></main><aside class="learn-history-panel" aria-label="对话历史"><header><h2>对话历史</h2><button data-action="history-close" aria-label="关闭历史">×</button></header><button class="learn-primary" data-action="new">＋ 新对话</button><div id="learn-history"></div><button class="learn-settings" data-action="settings">阅读设置</button></aside></div><dialog id="learn-image-dialog" class="learn-dialog learn-image-dialog"><header><h2>参考图片</h2><button data-close="learn-image-dialog" aria-label="关闭图片">×</button></header><img alt="参考材料图片"></dialog>
+ root.innerHTML=`<div class="learn-shell"><main class="learn-main"><header class="learn-header"><h1 id="learn-title">新对话</h1><div class="learn-header-actions"><button data-action="resume-preview" hidden>笔记预览</button><button data-action="scope" id="learn-scope">全部笔记 ▾</button><button data-action="history" aria-label="对话历史" aria-haspopup="dialog" aria-controls="learn-history-dialog" aria-expanded="false">历史</button><a class="learn-add" href="${esc((api.libraryURL || '/') + '?new=1')}" aria-label="新建笔记" title="新建笔记"><span aria-hidden="true">＋</span><span>新建笔记</span></a></div></header><div id="learn-notice" role="status" hidden></div><div id="learn-turns" class="learn-turns" aria-live="polite"></div><form id="learn-form" class="learn-composer"><label class="learn-sr" for="learn-question">问题</label><textarea id="learn-question" rows="2" maxlength="4000" placeholder="输入问题"></textarea><div><span class="learn-muted" id="learn-progress"></span><button class="learn-primary" type="submit" id="learn-send">发送 ↑</button></div></form></main><aside class="learn-history-panel" aria-label="对话历史"><header><h2>对话历史</h2><button data-action="history-close" aria-label="关闭历史">×</button></header><button class="learn-primary" data-action="new">＋ 新对话</button><div id="learn-history"></div><button class="learn-settings" data-action="settings">阅读设置</button></aside></div><dialog class="learn-history-dialog" id="learn-history-dialog" aria-label="对话历史"></dialog><dialog id="learn-image-dialog" class="learn-dialog learn-image-dialog"><header><h2>参考图片</h2><button data-close="learn-image-dialog" aria-label="关闭图片">×</button></header><img alt="参考材料图片"></dialog>
  <dialog class="learn-dialog" id="learn-materials" aria-labelledby="learn-material-title"><header><h2 id="learn-material-title">参考材料</h2><button data-close="learn-materials" aria-label="关闭材料">×</button></header><div class="learn-material-tabs" role="tablist"><button role="tab" data-material-tab="used">本轮参考</button><button role="tab" data-material-tab="all">全部检索</button></div><p class="learn-muted" id="learn-material-caption"></p><div id="learn-material-content"></div></dialog>
- <dialog class="learn-dialog" id="learn-scope-dialog" aria-labelledby="learn-scope-title"><header><h2 id="learn-scope-title">笔记范围</h2><button data-close="learn-scope-dialog" aria-label="关闭范围">×</button></header><p class="learn-muted">不勾选时检索全部未归档笔记。范围调整只影响后续回答。</p><input id="learn-note-search" type="search" placeholder="搜索笔记标题" aria-label="搜索笔记标题"><div id="learn-note-options"></div><footer><button data-action="all-notes">全部笔记</button><button class="learn-primary" data-action="scope-done">完成</button></footer></dialog>
+ <dialog class="learn-dialog" id="learn-scope-dialog" aria-labelledby="learn-scope-title"><header><h2 id="learn-scope-title">笔记范围</h2><button data-close="learn-scope-dialog" aria-label="关闭范围">×</button></header><p class="learn-muted">留空时检索全部笔记，选择仅对后续回答生效。</p><input id="learn-note-search" type="search" placeholder="搜索笔记标题" aria-label="搜索笔记标题"><div id="learn-note-options"></div><footer><button data-action="all-notes">全部笔记</button><button class="learn-primary" data-action="scope-done">完成</button></footer></dialog>
  <dialog class="learn-dialog" id="learn-save-dialog" aria-labelledby="learn-save-title"><header><h2 id="learn-save-title">笔记预览</h2><button data-close="learn-save-dialog" aria-label="关闭预览">×</button></header><div id="learn-save-choice"><button data-action="draft-round">只整理这一轮</button><button data-action="draft-chat">整理整段对话</button></div><form id="learn-save-form" hidden><label>标题<input id="learn-draft-title" maxlength="200" required></label><label for="learn-draft-body">正文</label><textarea id="learn-draft-body" maxlength="40000" rows="10" required></textarea><footer><span id="learn-save-status" role="status"></span><button type="button" data-action="redraft">重新整理</button><button class="learn-primary" type="submit">保存笔记</button></footer></form><p id="learn-draft-status" role="status"></p></dialog>`;
  const notice=(text,error=false)=>{if(destroyed)return;$('#learn-notice').hidden=!text;$('#learn-notice').textContent=text;$('#learn-notice').classList.toggle('learn-error',error);};
  function setBusy(value,label='正在检索并整理回答…'){busy=value;$('#learn-question').disabled=value;$('#learn-send').disabled=value;root.querySelectorAll('[data-action="new"],[data-chat],[data-action="save"],[data-action="scope"]').forEach(b=>b.disabled=value);$('#learn-progress').textContent=value?label:'';}
- function history(){ $('#learn-history').innerHTML=chats.map(c=>`<button data-chat="${c.id}" class="${c.id===chat?.id?'active':''}" title="${esc(c.title)}">${esc(c.title)}</button>`).join('')||'<p class="learn-muted">暂无对话</p>'; }
+ function history(){ $('#learn-history').innerHTML=chats.map(c=>`<button data-chat="${c.id}" class="${c.id===chat?.id?'active':''}" ${c.id===chat?.id?'aria-current="page"':''} title="${esc(c.title)}">${esc(c.title)}</button>`).join('')||'<p class="learn-muted">暂无对话</p>'; }
+ // The same history list sits in the right column on desktop and a modal on narrow screens.
+ const historyDialog=$('#learn-history-dialog'), historyPanel=$('.learn-history-panel'), historyToggle=$('[data-action="history"]');
+ function openHistory(){
+   if(historyDialog.open)return;
+   historyDialog.append(historyPanel);
+   historyDialog.showModal();
+   historyToggle.setAttribute('aria-expanded','true');
+ }
+ function closeHistory(){if(historyDialog.open)historyDialog.close();}
+ historyDialog.onclose=()=>{
+   $('.learn-shell')?.append(historyPanel);
+   historyToggle.setAttribute('aria-expanded','false');
+ };
+ historyDialog.onclick=e=>{
+   if(e.target===historyDialog)closeHistory();
+ };
+ const wide=root.ownerDocument.defaultView?.matchMedia?.('(min-width: 1101px)');
+ const closeWide=()=>{if(wide?.matches)closeHistory();};
+ wide?.addEventListener('change',closeWide);
  const imageCache=new Map();
  const imageURL=key=>{if(!imageCache.has(key))imageCache.set(key,Promise.resolve().then(()=>api.image(key)).catch(e=>{imageCache.delete(key);throw e;}));return imageCache.get(key);};
  function loadAnswerImages(){for(const image of root.querySelectorAll('[data-answer-image]'))imageURL(image.dataset.answerImage).then(src=>{if(image.isConnected)image.src=src;}).catch(()=>{image.alt='图片暂时无法读取，点击重试';});}
@@ -32,7 +51,7 @@ export function mountLearning(root,api){
    if(busy)root.querySelectorAll('[data-chat],[data-action="save"]').forEach(b=>b.disabled=true);
  }
  async function refreshList(){chats=(await api.request({path:'/api/learning'})).chats;history();}
- async function openChat(id){if(busy)return;notice('');const data=await api.request({path:'/api/learning?id='+id});if(!data.chat)throw new Error('对话不存在。');chat=data.chat;scope=chat.turns.at(-1)?.scope||[];$('#learn-scope').textContent=scope.length?`已选 ${scope.length} 篇 ▾`:'全部笔记 ▾';requestId=null;$('#learn-question').value='';render();$('.learn-shell').classList.remove('history-open');$('[data-action="history"]').setAttribute('aria-expanded','false');api.setChat?.(id);await restoreTemporary();}
+ async function openChat(id){if(busy)return;notice('');const data=await api.request({path:'/api/learning?id='+id});if(!data.chat)throw new Error('对话不存在。');chat=data.chat;scope=chat.turns.at(-1)?.scope||[];$('#learn-scope').textContent=scope.length?`已选 ${scope.length} 篇 ▾`:'全部笔记 ▾';requestId=null;$('#learn-question').value='';render();closeHistory();api.setChat?.(id);await restoreTemporary();}
  async function materials(turnId,focus){
    materialTurn=chat.turns.find(t=>t.id===turnId);if(!materialTurn)return;
    if(focus)materialTab='used';
@@ -107,13 +126,14 @@ export function mountLearning(root,api){
  }
  const click=async e=>{const b=e.target.closest('button');if(!b)return;try{
    if(b.dataset.imageKey){const dialog=$('#learn-image-dialog');dialog.querySelector('img').src=await imageURL(b.dataset.imageKey);dialog.showModal();return;}
-   if(b.dataset.action==='history'||b.dataset.action==='history-close'){const open=b.dataset.action==='history'&&!$('.learn-shell').classList.contains('history-open');$('.learn-shell').classList.toggle('history-open',open);$('[data-action="history"]').setAttribute('aria-expanded',String(open));return;}
+   if(b.dataset.action==='history'){openHistory();return;}
+   if(b.dataset.action==='history-close'){closeHistory();return;}
    if(b.dataset.close){$('#'+b.dataset.close).close();return;}
    if(b.dataset.chat)return await openChat(b.dataset.chat);
    if(b.dataset.ref)return await materials(b.dataset.turn,b.dataset.ref);
    if(b.dataset.materialTab){materialTab=b.dataset.materialTab;return await materials(materialTurn.id);}
    if(b.dataset.suggestion){$('#learn-question').value=b.dataset.suggestion;++questionRevision;void keepQuestion();$('#learn-question').focus();return;}
-   if(b.dataset.action==='new'){if(busy)return;chat=null;pending=null;requestId=null;$('#learn-question').value='';render();$('.learn-shell').classList.remove('history-open');$('[data-action="history"]').setAttribute('aria-expanded','false');api.setChat?.('');await restoreTemporary();}
+   if(b.dataset.action==='new'){if(busy)return;chat=null;pending=null;requestId=null;$('#learn-question').value='';render();closeHistory();api.setChat?.('');await restoreTemporary();}
    if(b.dataset.action==='scope'){renderScopes();$('#learn-scope-dialog').showModal();}
    if(b.dataset.action==='all-notes'){scope=[];renderScopes();}
    if(b.dataset.action==='scope-done'){$('#learn-scope-dialog').close();$('#learn-scope').textContent=scope.length?`已选 ${scope.length} 篇 ▾`:'全部笔记 ▾';}
@@ -140,5 +160,5 @@ export function mountLearning(root,api){
 
  render();
  (async()=>{try{const [{notes:list}]=await Promise.all([api.request({path:'/api/notes'}),refreshList()]);notes=list.filter(n=>!n.deletedAt&&!n.archived&&n.status!=='inbox');if(api.chatId)await openChat(api.chatId);else await restoreTemporary();const status=await api.run('status');if(!status.configured)notice('先在阅读设置中配置 DeepSeek，再开始提问。');}catch(e){notice(e.message,true);}})();
- return ()=>{destroyed=true;editor?.destroy();root.removeEventListener('click',click);root.innerHTML='';};
+ return ()=>{destroyed=true;editor?.destroy();wide?.removeEventListener('change',closeWide);root.removeEventListener('click',click);root.innerHTML='';};
 }

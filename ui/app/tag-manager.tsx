@@ -37,7 +37,7 @@ export default function TagManager({ initial, selected, onClose, onFilter, onCha
   }
   const shown = state.tags.filter(t => tagKey(t.name).includes(tagKey(query)));
   return <dialog ref={ref} className="modal tag-manager" aria-label="标签管理" onCancel={e => { e.preventDefault(); if (!lock.current) onClose(); }}>
-    <header className="modal-header"><h2>标签管理 <span>{state.tags.length}</span></h2><button type="button" className="icon-button" aria-label="关闭标签管理" disabled={busy} onClick={onClose}><X size={18}/></button></header>
+    <header className="modal-header"><h2>标签管理 <span>{state.tags.length} 个</span></h2><button type="button" className="icon-button" aria-label="关闭标签管理" disabled={busy} onClick={onClose}><X size={18}/></button></header>
     <div className="tag-manager-body">
       <label className="tag-manager-search"><Search size={15}/><input aria-label="搜索标签" placeholder="搜索标签" value={query} onChange={e => setQuery(e.target.value)}/></label>
       {onFilter && <button type="button" className="tag-manager-all" aria-pressed={!selected} onClick={() => onFilter("")}>全部笔记{!selected && <Check size={14}/>}</button>}
@@ -50,7 +50,7 @@ export default function TagManager({ initial, selected, onClose, onFilter, onCha
             <small>同步更新 {tag.usageCount} 篇关联笔记的标签</small>
           </form> : <>
             {onFilter ? <button type="button" className="tag-manager-name" aria-label={`筛选标签 ${tag.name}`} aria-pressed={tagKey(selected) === tagKey(tag.name)} onClick={() => onFilter(tag.name)}><span>#</span><b>{tag.name}</b>{tagKey(selected) === tagKey(tag.name) && <Check size={14}/>}</button> : <div className="tag-manager-name"><span>#</span><b>{tag.name}</b></div>}
-            <span className="tag-manager-count">{tag.count} 篇在笔记库</span>
+            <span className="tag-manager-count" title="笔记库中的篇数">{tag.count} 篇</span>
             <button type="button" className="icon-button" aria-label={`重命名标签 ${tag.name}`} disabled={busy} onClick={() => { setEditing(tag.name); setRenamed(tag.name); setError(""); }}><Pencil size={14}/></button>
           </>}
         </div>)}

@@ -1,8 +1,29 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clips · Agent 连接</title><link rel="stylesheet" href="agent.css"></head>
-<body><main><header><a href="library.html"><img src="icons/32.png" alt="">Clips</a><span>Agent 连接</span></header>
-<h1>连接 Codex</h1><p>在对话中查找笔记、保存想法和追加记录。</p>
-<section><h2>资料库</h2><strong id="library">正在读取…</strong><p id="state" role="status"></p><p class="muted">连接只授权这个资料库。Chrome 需要保持运行。</p></section>
-<section><h2>首次连接</h2><ol><li>下载 <a href="https://github.com/baijianyu1024-cmd/clips" target="_blank" rel="noopener noreferrer">Clips 源码</a>，在项目目录运行：<pre><code>npm --prefix agent ci</code></pre><pre><code id="setup-command"></code></pre></li><li><label for="pair-code">粘贴命令返回的配对码</label><input id="pair-code" type="password" autocomplete="off" spellcheck="false" placeholder="5 分钟内有效"><button id="pair" class="primary">连接当前资料库</button></li></ol><p class="muted">支持搜索、读取、新建笔记和追加记录；不会提供 AI Key 或浏览器登录凭据。</p></section>
-<section class="actions"><button id="reconnect">重新连接</button><button id="disconnect">断开授权</button><a href="https://github.com/baijianyu1024-cmd/clips/blob/main/docs/AGENT.md" target="_blank" rel="noopener noreferrer">安装说明 ↗</a></section>
-<p id="error" role="alert"></p></main><script type="module" src="agent-ui.js"></script></body></html>
+<html lang="zh-CN" class="clips-desk-ui">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Clips · Agent 连接</title>
+  <link rel="stylesheet" href="desk-theme.css"><link rel="stylesheet" href="agent.css">
+</head>
+<body><main class="desk-utility">
+  <header class="utility-header"><a class="utility-brand" href="library.html"><img src="icons/32.png" alt="">Clips</a><a class="utility-back" href="library.html">返回笔记库 ↗</a></header>
+  <h1 class="utility-title">Agent 连接</h1>
+  <section class="utility-row">
+    <h2>当前资料库</h2>
+    <div><strong id="library">正在读取…</strong><p id="state" role="status"></p>
+      <p class="muted">授权仅限此资料库。使用 Codex 访问笔记时，请保持 Chrome 运行。</p>
+      <div class="utility-actions"><button id="reconnect">重新连接</button><button id="disconnect">断开授权</button></div>
+    </div>
+  </section>
+  <section class="utility-row">
+    <h2>连接 Codex</h2>
+    <div><ol>
+      <li>下载 <a href="https://github.com/baijianyu1024-cmd/clips" target="_blank" rel="noopener noreferrer">Clips 源码</a>，在项目目录运行<pre><code>npm --prefix agent ci</code></pre><pre><code id="setup-command"></code></pre></li>
+      <li><label for="pair-code">输入命令返回的配对码</label><div class="pair-input"><input id="pair-code" type="password" autocomplete="off" spellcheck="false" placeholder="5 分钟内有效"><button id="pair" class="primary">连接当前资料库</button></div></li>
+    </ol>
+    <p class="muted">配对后即可查找、保存和修改笔记。API Key 和浏览器登录凭据保留在本机。</p>
+    <a href="https://github.com/baijianyu1024-cmd/clips/blob/main/docs/AGENT.md" target="_blank" rel="noopener noreferrer">安装说明 ↗</a>
+    </div>
+  </section>
+  <p id="error" role="alert"></p>
+</main><script type="module" src="agent-ui.js"></script></body></html>

@@ -1,0 +1,109 @@
+/* Shared by the standalone Clips pages and the web installation guide. */
+.clips-desk-ui {
+  color-scheme: light;
+  --paper: #fbfcfa;
+  --rail: #f0f3ef;
+  --ink: #232922;
+  --muted: #566056;
+  --line: #d8dfd6;
+  --tint: #e2e9e1;
+  --accent: #315647;
+  --green: var(--accent);
+  --soft: var(--rail);
+  font-family: system-ui, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.clips-desk-ui :is(button, input, textarea, select) { font-family: inherit; }
+.clips-desk-ui :is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.clips-desk-ui :is(button, a, summary) { -webkit-tap-highlight-color: transparent; }
+.clips-desk-ui .primary { color: white; background: var(--ink); border-color: var(--ink); }
+.clips-desk-ui .primary:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+
+.desk-utility {
+  box-sizing: border-box;
+  width: min(100%, 60rem);
+  margin-inline: auto;
+  padding: 0 clamp(16px, 4vw, 48px) 48px;
+}
+.desk-utility .utility-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  border-bottom: 1px solid var(--line);
+}
+.utility-header .utility-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 680;
+  line-height: 1;
+  letter-spacing: -.8px;
+  text-decoration: none;
+}
+.utility-brand img { width: 25px; height: 25px; }
+.utility-header .utility-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.utility-header .utility-back:hover { text-decoration: underline; text-underline-offset: 3px; }
+.desk-utility .utility-title {
+  margin: 28px 0 18px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: clamp(23px, 3vw, 28px);
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -.025em;
+}
+.utility-row {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px clamp(18px, 3vw, 36px);
+  border-top: 1px solid var(--line);
+  padding-block: 20px;
+}
+.utility-row > :first-child { margin: 0; font: inherit; font-size: 15px; font-weight: 600; }
+.utility-row > div { min-width: 0; overflow-wrap: anywhere; }
+.utility-row p { margin: 4px 0 10px; line-height: 1.7; }
+.utility-row p:last-child { margin-bottom: 0; }
+.utility-row :is(.hint, .muted), .utility-caption { color: var(--muted); font-size: 13px; }
+.utility-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.utility-actions > :is(button,a) { min-height: 36px; }
+.desk-utility summary { width: fit-content; color: var(--accent); font-size: 13px; cursor: pointer; }
+@media (max-width: 580px) {
+  .utility-row { grid-template-columns: minmax(0,1fr); gap: 6px; padding-block: 16px; }
+  .desk-utility .utility-header { min-height: 54px; }
+  .desk-utility .utility-title { margin: 20px 0 12px; }
+}
+
+.bridge-page { min-height: 100dvh; }
+.bridge-release {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 26px 0 14px;
+}
+.bridge-release .utility-title { margin: 0 0 4px; }
+.bridge-install { padding-bottom: 20px; }
+.bridge-install ol { margin-top: 8px; padding-left: 1.4em; list-style: decimal; }
+.bridge-page .desk-utility { font-size: 14px; line-height: 1.7; }
+.bridge-page .desk-utility details[open] > :not(summary) { margin-top: 8px; }
+.bridge-page .desk-utility summary { display: list-item; }
+.bridge-page .desk-utility .utility-row details > p { color: var(--muted); }

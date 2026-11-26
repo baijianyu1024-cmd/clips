@@ -131,17 +131,33 @@ export default function ReadingTimeline({ note, onUpdate, onPreview, onAnchor, e
   }
   const viewQuote = (clip: Note["clips"][number]) => quoteView(clip, note.transcripts?.find(t => t.id === clip.transcriptAnchor?.snapshotId)?.language);
   function content(entry: Entry) {
-    const text = entry.type === "legacy" ? note.summary : entry.type === "clip" ? viewQuote(entry.clip).original : "";
-    const thought = entry.type === "legacy" ? note.thought : entry.type === "clip" ? entry.clip.thought : "";
-    const images = entry.type === "legacy" ? note.legacyRecordImages || [] : entry.type === "clip" ? entry.clip.images || [] : [entry.image];
-    return <>{text && <blockquote className="prose"><Markdown>{text}</Markdown></blockquote>}{entry.type === "clip" && viewQuote(entry.clip).pending && <p className="reading-log-empty">中文译文待补齐，可在插件中点击「补译中文」。</p>}{entry.type === "clip" && viewQuote(entry.clip).translation && entry.clip.translation && <div className="clip-translation"><span className="clip-label">AI 译文 · {entry.clip.translation.model}</span><Markdown className="prose">{entry.clip.translation.text}</Markdown></div>}{thought && <>{text && <span className="clip-label">我的想法</span>}<Markdown className="prose clip-thought">{thought}</Markdown></>}{gallery(images)}{entry.type === "clip" && <div className="clip-origin">{entry.clip.sourceUrl && <a href={youtubeId(entry.clip.sourceUrl) && entry.clip.videoTime !== null ? youtubeUrl(youtubeId(entry.clip.sourceUrl), entry.clip.videoTime) : entry.clip.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.clip.sourceTitle || domain(entry.clip.sourceUrl)}{entry.clip.videoTime !== null && ` · ${Math.floor(entry.clip.videoTime / 60)}:${String(Math.floor(entry.clip.videoTime % 60)).padStart(2, "0")}`} ↗</a>}{(entry.clip.anchor || entry.clip.transcriptAnchor) && <button className="clip-anchor-link" onClick={() => onAnchor(entry.clip)}>{entry.clip.transcriptAnchor ? "查看字幕上下文" : "回到这段原文 ↗"}</button>}</div>}</>;
+    const clip = entry.type === "clip" ? entry.clip : null;
+    const quote = clip ? viewQuote(clip) : null;
+    const thought = entry.type === "legacy" ? note.thought : clip?.thought;
+    const text = entry.type === "legacy" ? note.summary : quote?.original || (thought && clip?.text);
+    const images = entry.type === "legacy" ? note.legacyRecordImages || [] : entry.type === "image" ? [entry.image] : entry.clip.images || [];
+    const source = <>
+      {text && <blockquote className="prose"><Markdown>{text}</Markdown></blockquote>}
+      {quote?.translation && clip?.translation && <div className="clip-translation"><span className="clip-label">AI 译文 · {clip.translation.model}</span><Markdown className="prose">{quote.translation}</Markdown></div>}
+      {quote?.pending && <p className="reading-log-empty">中文译文待补齐，可在插件中点击「补译中文」。</p>}
+    </>;
+    const hasSource = text || quote?.translation || quote?.pending;
+    return <>
+      {thought && <Markdown className="prose clip-thought">{thought}</Markdown>}
+      {hasSource && (thought ? <details className="event-quotation"><summary>关联原文</summary>{source}</details> : source)}
+      {gallery(images)}
+      {clip && <div className="clip-origin">
+        {clip.sourceUrl && <a href={youtubeId(clip.sourceUrl) && clip.videoTime !== null ? youtubeUrl(youtubeId(clip.sourceUrl), clip.videoTime) : clip.sourceUrl} target="_blank" rel="noopener noreferrer">{clip.sourceTitle || domain(clip.sourceUrl)}{clip.videoTime !== null && ` · ${Math.floor(clip.videoTime / 60)}:${String(Math.floor(clip.videoTime % 60)).padStart(2, "0")}`} ↗</a>}
+        {(clip.anchor || clip.transcriptAnchor) && <button className="clip-anchor-link" onClick={() => onAnchor(clip)}>{clip.transcriptAnchor ? "查看字幕上下文" : "回到这段原文 ↗"}</button>}
+      </div>}
+    </>;
   }
   function editor(target: string, entry?: Entry) {
     if (!expanded || !draft || draft.target !== target || readOnly) return null;
     const translatedOnly = entry?.type === "clip" && viewQuote(entry.clip).language === "other";
     return <form className="reading-inline-editor" onPaste={e => { const files = Array.from(e.clipboardData.files).filter(f => f.type.startsWith("image/")); if (files.length) { e.preventDefault(); void upload(files); } }} onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void upload(Array.from(e.dataTransfer.files)); } }} onSubmit={e => { e.preventDefault(); void save(); }} onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); void save(); } }}>
       {translatedOnly ? <div className="clip-translation"><span className="clip-label">中文引用 · AI 译文</span><Markdown className="prose">{entry?.type === "clip" ? viewQuote(entry.clip).translation || "中文译文待补齐" : ""}</Markdown></div> : <label><span>原文摘录 <small>选填</small></span><MarkdownTextarea aria-label="原文摘录内容" rows={3} maxLength={target === "legacy" ? 40000 : 20000} value={draft.text} disabled={busy} onChange={e => keep({ ...draft, text: e.target.value })} placeholder="留下有触动的那句话…"/></label>}
-      <label><span>我的想法 <small>文字、图片都可以</small></span><MarkdownTextarea aria-label="我的想法内容" rows={3} maxLength={target === "legacy" ? 40000 : 20000} value={draft.thought} disabled={busy} onChange={e => keep({ ...draft, thought: e.target.value })} placeholder="添加想法…"/></label>
+      <label><span>我的想法</span><MarkdownTextarea aria-label="我的想法内容" rows={3} maxLength={target === "legacy" ? 40000 : 20000} value={draft.thought} disabled={busy} onChange={e => keep({ ...draft, thought: e.target.value })} placeholder="添加想法…"/></label>
       <MarkdownHelp/>{gallery(draft.images, true)}
       <button type="button" className="image-upload record-image-upload" disabled={busy || draft.images.length >= 30} onClick={() => fileRef.current?.click()}>{busy ? <Loader2 size={15} className="spin"/> : <ImagePlus size={15}/>}添加图片<span>也可粘贴或拖入 · 单张不超过 8 MB</span></button>
       <input ref={fileRef} type="file" aria-label="添加记录图片" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden onChange={e => void upload(Array.from(e.target.files || []))}/>
@@ -158,8 +174,8 @@ export default function ReadingTimeline({ note, onUpdate, onPreview, onAnchor, e
   entries.sort((a, b) => a.at && b.at ? Date.parse(a.at) - Date.parse(b.at) : a.at ? -1 : b.at ? 1 : 0);
   if (editTarget) return <section className="library-inline-editor" aria-label="编辑记录">{error && <p className="field-error" role="alert">{error}</p>}{draft && draft.target !== editTarget && <p className="field-error">这篇笔记有未保存的草稿，请先处理这份草稿。</p>}{draft && editor(draft.target, entries.find(e => e.id === draft.target))}</section>;
   return <section className="reading-log" aria-label="随读记录">
-    <div className="section-heading"><h3>随读记录</h3><span>按记录时间 · 从早到晚</span></div>
-    {!readOnly && <div className="reading-tools"><button className="text-button" disabled={busy} onClick={() => edit(draft?.target || "new")}><Plus size={14}/>{draft ? "继续编辑" : "记一笔"}</button></div>}
+    <div className="section-heading"><h3>随读记录 <small>{entries.length}</small></h3>
+    {!readOnly && <button className="text-button" disabled={busy} onClick={() => edit(draft?.target || "new")}><Plus size={14}/>{draft ? "继续编辑" : "记一笔"}</button>}</div>
     {error && <p className="field-error" role="alert">{error}</p>}
     {editor("new")}
     {draft && draft.target !== "new" && !entries.some(e => e.id === draft.target) && editor(draft.target)}
@@ -167,10 +183,10 @@ export default function ReadingTimeline({ note, onUpdate, onPreview, onAnchor, e
     <ol className="reading-timeline">{entries.map(e => {
       const editing = expanded && draft?.target === e.id && !readOnly;
       return <li className="reading-event" key={e.id}><span className="reading-event-dot" aria-hidden="true"/>
-        <div className="reading-event-meta">{e.at ? <time dateTime={e.at}>{stamp(e.at)}</time> : <span>时间未记录</span>}<span>{e.type === "legacy" ? "此前留下的记录" : e.type === "image" ? "截图" : e.clip.text ? viewQuote(e.clip).language === "other" ? "中文引用" : "原文摘录" : "记录"}</span><div className="record-actions">{!readOnly && !editing && <button className="text-button record-edit" disabled={busy} aria-label={`修改记录：${e.at ? stamp(e.at) : "截图"}`} onClick={() => edit(e.id)}>修改</button>}{!readOnly && <DeleteRecord note={note} kind={e.type} id={e.id} onUpdate={onUpdate} onDeleted={() => { if (draft?.target === e.id) clear(); }}/>}</div></div>
+        <div className="reading-event-meta">{e.at ? <time dateTime={e.at}>{stamp(e.at)}</time> : <span>时间未记录</span>}<span>{e.type === "legacy" ? "此前留下的记录" : e.type === "image" ? "截图" : e.clip.thought ? "随读想法" : e.clip.text ? viewQuote(e.clip).language === "other" ? "中文引用" : "原文摘录" : "记录"}</span><div className="record-actions">{!readOnly && !editing && <button className="text-button record-edit" disabled={busy} aria-label={`修改记录：${e.at ? stamp(e.at) : "截图"}`} onClick={() => edit(e.id)}>修改</button>}{!readOnly && <DeleteRecord note={note} kind={e.type} id={e.id} onUpdate={onUpdate} onDeleted={() => { if (draft?.target === e.id) clear(); }}/>}</div></div>
         {editing ? editor(e.id, e) : content(e)}
       </li>;
     })}</ol>
-    {!entries.length && !expanded && <div className="reading-log-empty">还没有随读记录。读到有启发的地方，可以留下文字、图片，或把它们放在一起。</div>}
+    {!entries.length && !expanded && <div className="reading-log-empty">暂无随读记录</div>}
   </section>;
 }

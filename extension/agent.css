@@ -1,1 +1,31 @@
-:root{color-scheme:light;font-family:system-ui,-apple-system,sans-serif;color:#292d29;background:#fafbf9;font-size:15px}*{box-sizing:border-box}body{margin:0}main{max-width:680px;margin:36px auto;padding:0 24px 48px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dfe2dc;padding-bottom:24px;color:#6c736b}header a{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:650;color:inherit;text-decoration:none}header img{width:28px}h1{font-size:24px;margin-top:32px}h2{font-size:16px;margin:0 0 14px}p{line-height:1.6}section{padding:24px 0;border-bottom:1px solid #dfe2dc}.muted{font-size:13px;color:#697267}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf0ea;padding:12px;border-radius:6px;font-size:12px}ol{padding-left:20px}li+li{margin-top:20px}input{width:100%;padding:12px;border:1px solid #cfd5cb;border-radius:6px;font:inherit;margin:8px 0 12px;background:white}button{padding:10px 16px;border:1px solid #cfd5cb;border-radius:6px;background:white;color:inherit;font:inherit;cursor:pointer}.primary{background:#353d36;color:white;border-color:#353d36}button:disabled{opacity:.5;cursor:wait}a{color:#435645}#error{color:#a03434}.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}:focus-visible{outline:2px solid #788a76;outline-offset:3px}
+* { box-sizing: border-box; }
+body { margin: 0; font-size: 14px; line-height: 1.65; }
+input, button { font: inherit; }
+a { color: var(--accent); text-underline-offset: 3px; }
+button, input {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: white;
+}
+button { cursor: pointer; }
+button:disabled { opacity: .55; cursor: wait; }
+button:not(:disabled):not(.primary):hover { background: var(--rail); }
+.utility-actions { margin-top: 12px; }
+#state { color: var(--accent); font-size: 13px; }
+ol { margin: 0 0 14px; padding-left: 1.3em; }
+li + li { margin-top: 16px; }
+pre {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--line);
+  background: var(--rail);
+  font: 13px/1.7 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pair-input { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.pair-input input { flex: 1 1 190px; min-width: 0; }
+#error { color: #933e35; overflow-wrap: anywhere; }

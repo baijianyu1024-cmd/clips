@@ -4,7 +4,7 @@ import DeleteRecord from "./delete-record";
 import Markdown, { MarkdownHelp, MarkdownTextarea } from "./markdown";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, ImagePlus, Loader2, Pencil, Sparkles, X } from "lucide-react";
+import { Check, ImagePlus, Loader2, X } from "lucide-react";
 import { imageSchema, type CoreSummary, type Note } from "./model";
 import "./note-content.css";
 
@@ -97,9 +97,9 @@ export default function CoreSummarySection({ note, onUpdate, onPreview, editorOn
     return images.length > 0 && <div className="core-summary-images">{images.map(img => <button type="button" key={img.key} aria-label={`放大图片：${img.name}`} onClick={() => onPreview(img.key)}><MediaImage loading="lazy" src={imageUrl(img.key)} alt={img.name}/></button>)}</div>;
   }
   return <section className="core-summary" aria-label="核心摘要">
-    <header><h3>核心摘要</h3>{!readOnly && <div>{!editing && <button className="text-button" onClick={edit} disabled={saving || uploading}><Pencil size={13}/>{draft ? "继续修改" : current ? "修改" : "自己写"}</button>}<button className="text-button" aria-expanded={showAI} onClick={() => setShowAI(!showAI)}><Sparkles size={13}/>{current ? "AI 重新整理" : "用 AI 生成"}</button>{current && !editing && <DeleteRecord note={note} kind="core" id="core" onUpdate={onUpdate}/>}</div>}</header>
+    <header><h3>核心摘要</h3>{!readOnly && <div>{!editing && <button className="text-button" onClick={edit} disabled={saving || uploading}>{draft ? "继续修改" : current ? "修改" : "自己写"}</button>}<button className="text-button" aria-expanded={showAI} onClick={() => setShowAI(!showAI)}>{current ? "AI 重新整理" : "用 AI 生成"}</button>{current && !editing && <DeleteRecord note={note} kind="core" id="core" onUpdate={onUpdate}/>}</div>}</header>
     {!showEditor && current ? <><Markdown className="core-summary-text prose">{current.text}</Markdown>{gallery(current.images)}<div className="core-summary-meta"><span>{current.origin === "ai" ? `AI 辅助 · ${current.provider}` : "手动撰写"}{current.origin === "ai" && current.edited ? " · 已手动修改" : ""}</span><time>{new Date(current.createdAt).toLocaleDateString("zh-CN")} 更新</time>{current.scope !== "手动撰写" && <span>{current.scope}</span>}</div></> : !showEditor && <div className="core-summary-empty"><p>暂无摘要</p></div>}
-    {showAI && <div className="core-ai-help"><p>在原文页打开 Clips，点击「核心摘要」。可读取的文字、图片和随读记录用于生成，确认保存后同步到这里。</p>{note.sources.length > 0 && <a href={note.sources[0].url} target="_blank" rel="noopener noreferrer">打开原文 ↗</a>}</div>}
+    {showAI && <div className="core-ai-help"><p>在原文页打开 Clips 侧栏，点击「核心摘要」生成并保存。</p>{note.sources.length > 0 && <a href={note.sources[0].url} target="_blank" rel="noopener noreferrer">打开原文 ↗</a>}</div>}
     {showEditor && <form className="core-summary-editor" onSubmit={e => { e.preventDefault(); void save(); }} onPaste={e => { const files = Array.from(e.clipboardData.files).filter(f => f.type.startsWith("image/")); if (files.length) { e.preventDefault(); void upload(files); } }} onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void upload(Array.from(e.dataTransfer.files)); } }}>
       <MarkdownTextarea id={`core-summary-${note.id}`} aria-label="核心摘要内容" rows={6} maxLength={40000} value={draft?.text || ""} disabled={saving} placeholder="添加核心摘要…" onChange={e => draft && keep({ ...draft, text: e.target.value })} onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); void save(); } }}/>
       <MarkdownHelp/>{!!draft?.images.length && <div className="core-image-drafts">{draft.images.map(img => <div key={img.key}><button type="button" className="core-image-preview" aria-label={`放大图片：${img.name}`} onClick={() => onPreview(img.key)}><MediaImage src={imageUrl(img.key)} alt={img.name}/></button><button type="button" className="core-image-remove" disabled={saving || uploading} aria-label={`移除摘要图片：${img.name}`} onClick={() => keep({ ...draft, images: draft.images.filter(i => i.key !== img.key) })}><X size={14}/></button></div>)}</div>}

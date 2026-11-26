@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clips</title><link rel="stylesheet" href="panel.css"><link rel="stylesheet" href="markdown.css"></head>
-<body>
+<html lang="zh-CN" class="clips-desk-ui"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clips</title><link rel="stylesheet" href="panel.css"><link rel="stylesheet" href="markdown.css"><link rel="stylesheet" href="desk-theme.css"></head>
+<body class="panel-page">
   <div id="demo-label" hidden>交互演示 · 不读取真实网页</div>
   <header class="brandbar"><div class="brand"><img src="icons/32.png" alt=""><span>Clips</span></div><div class="header-actions"><button data-action="library" title="打开笔记库" aria-label="打开笔记库">↗</button><button data-action="settings" title="阅读设置" aria-label="阅读设置">⚙</button></div></header>
   <div id="connection" class="connection"></div>
@@ -28,11 +28,44 @@
     </section>
     <section id="entries"></section>
   </main>
-  <footer class="panel-footer"><span>Clips 0.17.2</span></footer>
+  <footer class="panel-footer"><span>Clips<span id="panel-version"></span></span></footer>
   <dialog id="save-context-dialog" aria-labelledby="save-context-title"></dialog>
   <dialog id="image-viewer"><div class="dialog-head"><h2>记录中的图片</h2><button data-action="close-dialog" aria-label="关闭图片">×</button></div><div id="image-viewer-body"></div></dialog>
   <dialog id="chooser"><div class="dialog-head"><h2>切换笔记</h2><button data-action="close-dialog" aria-label="关闭">×</button></div><div id="note-options"></div></dialog>
-  <dialog id="settings"><div class="dialog-head"><h2>阅读设置</h2><button data-action="close-dialog" aria-label="关闭">×</button></div><section class="settings-service"><h3>Agent 连接</h3><a href="agent.html" target="_blank" rel="noopener noreferrer">连接 Codex / MCP ↗</a></section><section class="settings-service"><h3>YouTube 视频快捷入口</h3><p class="hint">视频右上角「记一笔」会保存当前时间附近的字幕。非中文引用会将附近字幕发送给 DeepSeek，自动补齐中文译文。开启后，每次打开 YouTube 自动显示；也可在视频页点击工具栏Clips图标，仅在本次页面使用。</p><button class="primary" data-action="yt-enable-entry">在 YouTube 显示快捷入口</button></section><section class="settings-service"><h3>YouTube 字幕 · Supadata</h3><p class="hint">点击读取时，仅发送视频链接给 Supadata。使用原生字幕；不会自动转录视频。</p><div class="settings-key-field"><div class="settings-field-label"><label for="supadata-key">Supadata API Key</label><a href="https://dash.supadata.ai/" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a></div><input id="supadata-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅在插件中填写"></div><label class="checkline"><input id="supadata-remember" type="checkbox">记住到本机（浏览器重启后仍可用）</label><p class="hint">默认随浏览器关闭而清除。Key 不上传到笔记库。</p><div id="supadata-state" class="hint"></div><div class="dialog-actions"><button class="quiet" data-action="clear-supadata">移除 Supadata Key</button><button class="primary" data-action="save-supadata">保存 Supadata</button></div></section><h3>阅读辅助 · DeepSeek</h3><p class="hint" id="settings-hint">使用你自己的 DeepSeek 账户。Overview 基于全部已保存字幕；翻译仅发送当前页缺失段落。摘要与理解使用你确认的页面上下文，均由你手动点击开始。</p><label>服务<input value="DeepSeek · api.deepseek.com" disabled></label><label>模型<input id="model" value="deepseek-flash" maxlength="200" autocomplete="off"></label><div class="settings-key-field"><div class="settings-field-label"><label for="api-key">API Key</label><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a></div><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅在此处填写"></div><label class="checkline"><input id="remember" type="checkbox">记住到本机（浏览器重启后仍可用）</label><p class="hint">默认随浏览器关闭而清除。勾选后保存在本机插件存储中；不会上传到笔记库，也不会随笔记导出。</p><div id="key-state" class="hint"></div><div class="dialog-actions"><button class="quiet" data-action="clear-key">移除 Key</button><button class="primary" data-action="save-settings">保存设置</button></div></dialog>
+  <dialog id="settings" aria-labelledby="reading-settings-title">
+    <div class="dialog-head"><h2 id="reading-settings-title">阅读设置</h2><button data-action="close-dialog" aria-label="关闭阅读设置">×</button></div>
+    <details class="settings-service" open>
+      <summary>AI 辅助 <span>DeepSeek</span></summary>
+      <div class="service-fields">
+        <p class="hint" id="settings-hint">使用你的 DeepSeek 账户。生成摘要或解释时发送已确认的上下文，视频概览使用已保存的字幕，翻译使用当前页缺少译文的段落。</p>
+        <label for="model">模型</label><input id="model" value="deepseek-flash" maxlength="200" autocomplete="off">
+        <div class="settings-key-field"><div class="settings-field-label"><label for="api-key">API Key</label><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a></div><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅在此处填写"></div>
+        <label class="checkline"><input id="remember" type="checkbox">浏览器重启后保留 Key</label>
+        <p class="hint">默认在浏览器关闭时清除。保留的 Key 仅存于本机插件，不随笔记导出。</p>
+        <p id="key-state" class="hint" role="status"></p>
+        <div class="dialog-actions"><button class="quiet" data-action="clear-key">移除 Key</button><button class="primary" data-action="save-settings">保存设置</button></div>
+      </div>
+    </details>
+    <details class="settings-service">
+      <summary>视频字幕 <span>Supadata</span></summary>
+      <div class="service-fields">
+        <p class="hint">手动读取时，Supadata 接收视频链接并返回原生字幕。</p>
+        <div class="settings-key-field"><div class="settings-field-label"><label for="supadata-key">Supadata API Key</label><a href="https://dash.supadata.ai/" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a></div><input id="supadata-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅在插件中填写"></div>
+        <label class="checkline"><input id="supadata-remember" type="checkbox">浏览器重启后保留 Key</label>
+        <p class="hint">默认在浏览器关闭时清除。保留的 Key 仅存于本机插件。</p>
+        <p id="supadata-state" class="hint" role="status"></p>
+        <div class="dialog-actions"><button class="quiet" data-action="clear-supadata">移除 Key</button><button class="primary" data-action="save-supadata">保存 Supadata</button></div>
+      </div>
+    </details>
+    <details class="settings-service">
+      <summary>YouTube 快捷入口</summary>
+      <div class="service-fields">
+        <p class="hint">开启后，视频页会显示「记一笔」。点击保存当前时间附近的字幕，非中文引用会将附近字幕发送给 DeepSeek 补译。也可点击工具栏的 Clips 图标，仅在当前页面开启。</p>
+        <button class="secondary" data-action="yt-enable-entry">在 YouTube 显示快捷入口</button>
+      </div>
+    </details>
+    <a class="settings-agent" href="agent.html" target="_blank" rel="noopener noreferrer">Agent 连接 <span>Codex / MCP ↗</span></a>
+  </dialog>
   <dialog id="ai-dialog" aria-labelledby="ai-title">
     <div class="dialog-head"><h2 id="ai-title">核心摘要</h2><button data-action="close-dialog" aria-label="关闭">×</button></div>
     <p id="ai-target" class="summary-note-title"></p>
