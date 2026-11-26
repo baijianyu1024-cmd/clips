@@ -29,13 +29,17 @@ async function refresh() {
   if(!target||target.mode!=='local') { showSetup(); return; }
   try {
     const result=await adapter.cloud({}); notes=result.notes; tags=result.tagState.tags;
-    $('#setup').hidden=true; $('#library').hidden=false; $('#new-note').disabled=false;
+    $('#setup').hidden=true; $('#library').hidden=!$('#settings').hidden; $('#new-note').disabled=false;
     $('#storage-label').textContent='本地 · '+target.name;
     connected=true; notice(); render();
   } catch(e) { connected=false; showSetup(); notice(e.message); }
 }
 function showSetup() {
-  $('#setup').hidden=false; $('#library').hidden=true; $('#new-note').disabled=true;
+  $('#setup').hidden=false; $('#settings').hidden=true; $('#library').hidden=true; $('#new-note').disabled=true;
+  if (!target) {
+    $('.utility-brand').removeAttribute('href');
+    $('#close-settings').hidden = true;
+  }
   $('#reconnect-folder').hidden=target?.mode!=='local';
   $('#storage-label').textContent=target?.name||'尚未选择文件夹';
   $('#counts').textContent='';
@@ -79,7 +83,7 @@ function renderList() {
   $('.filters').hidden=false; $('#thoughts-only').closest('label').hidden=view!=='records';
   const list=selected().filter(n=>!query||searchable(n).includes(query)).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   if(view!=='records') {
-    $('#content').innerHTML=(view==='inbox'?'<p><button data-action="queue">＋ 添加链接</button></p>':'')+list.map(n=>`<article class="note-row"><div class="meta">${esc(({article:'文章',video:'视频',podcast:'播客',idea:'灵感',other:'其他'})[n.kind]||n.kind)} · ${n.status==='read'?'已读完':n.status==='inbox'?'待阅读':'正在读'} ${n.published?' · 内容发布时间：'+esc(n.published):''}</div><h2><a href="#" data-action="detail" data-id="${n.id}">${esc(n.title)}</a></h2><p>${esc(markdownText(n.coreSummary?.text||n.thought||n.summary||n.clips?.[0]?.thought||n.clips?.[0]?.text||'').slice(0,180))}</p>${n.tags.map(t=>`<span class="chip">${esc(t)}</span>`).join('')}${view==='inbox'?`<p>${actions(n.id,'start-reading','开始阅读')}</p>`:''}</article>`).join('')||'<p class="empty">还没有笔记。点击「添加笔记」，或在阅读页面打开侧栏开始记录。</p>';
+    $('#content').innerHTML=(view==='inbox'?'<p><button data-action="queue">＋ 添加链接</button></p>':'')+list.map(n=>`<article class="note-row"><div class="meta">${esc(({article:'文章',video:'视频',podcast:'播客',idea:'灵感',other:'其他'})[n.kind]||n.kind)} · ${n.status==='read'?'已读完':n.status==='inbox'?'待阅读':'正在读'} ${n.published?' · 内容发布时间：'+esc(n.published):''}</div><h2><a href="#" data-action="detail" data-id="${n.id}">${esc(n.title)}</a></h2><p>${esc(markdownText(n.coreSummary?.text||n.thought||n.summary||n.clips?.[0]?.thought||n.clips?.[0]?.text||'').slice(0,180))}</p>${n.tags.map(t=>`<span class="chip">${esc(t)}</span>`).join('')}${view==='inbox'?`<p>${actions(n.id,'start-reading','开始阅读')}</p>`:''}</article>`).join('')||'<p class="empty">还没有笔记。点击「新建笔记」，或在阅读页面打开侧栏开始记录。</p>';
     return;
   }
   const rows=[];
@@ -93,7 +97,7 @@ function renderList() {
   $('#content').innerHTML=rows.filter(r=>!$('#thoughts-only').checked||r.thought).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).map(r=>{
     const day=date(r.at).split(' ')[0], heading=day!==previous?`<h3 class="date-heading">${esc(day)}</h3>`:''; previous=day;
     return `${heading}<article class="record"><div class="record-head"><time>${esc(date(r.at))}</time><a href="#" data-action="detail" data-id="${r.n.id}">${esc(r.n.title)}</a><span>${({summary:'核心摘要',record:r.thought?'想法':'摘录',review:'后来的理解',legacy:'记录'})[r.type]}</span><button data-action="edit-${r.type}" data-id="${r.n.id}" data-record="${r.id}">编辑</button></div>${r.thought?md(r.thought):''}${r.text?`<div class="${r.thought?'original':''}">${md(r.text)}</div>`:''}${gallery(r.images)}</article>`;
-  }).join('')||'<p class="empty">还没有符合条件的记录。可以先添加笔记，或清除筛选。</p>';
+  }).join('')||'<p class="empty">还没有符合条件的记录。可以先新建笔记，或清除筛选。</p>';
 }
 function renderDetail(n) {
   $('#heading').textContent='笔记详情'; $('.filters').hidden=true;
@@ -109,7 +113,7 @@ async function openEditor(type,n,recordId) {
   let original=type==='record'?n?.clips.find(c=>c.id===recordId):type==='summary'?n?.coreSummary:type==='review'?n?.reviews.find(r=>r.id===recordId):null;
   editing={type,noteId:n?.id||'',recordId,operationId:crypto.randomUUID(),revision:n?.revision,baseline:structuredClone(original||n||null),attachments:(original?.images||(type==='legacy'?n.images:[])||[]).map(image=>({id:crypto.randomUUID(),name:image.name,image})),values:{}};
   const saved=await adapter.read(editScope(editing)); if(saved) editing=saved;
-  $('#edit-title').textContent=({metadata:'基础信息',new:'添加笔记',record:recordId?'编辑记录':'添加记录',summary:'核心摘要',review:recordId?'编辑补充':'补充理解',legacy:'编辑记录',queue:'添加待阅读',tags:'标签管理'})[type];
+  $('#edit-title').textContent=({metadata:'基础信息',new:'新建笔记',record:recordId?'编辑记录':'添加记录',summary:'核心摘要',review:recordId?'编辑补充':'补充理解',legacy:'编辑记录',queue:'添加待阅读',tags:'标签管理'})[type];
   const initial=editing.values;
   if(type==='metadata'||type==='new') {
     $('#edit-fields').innerHTML=field('title','标题',initial.title??n?.title)+field('url','来源链接',initial.url??n?.sources[0]?.url)+`<div class="form-row"><label>内容类型<select name="kind">${[['article','文章'],['video','视频'],['podcast','播客'],['idea','灵感'],['other','其他']].map(([v,t])=>`<option value="${v}" ${v===(initial.kind??n?.kind)?'selected':''}>${t}</option>`).join('')}</select></label><label>阅读状态<select name="status">${[['reading','正在读'],['read','已读完'],['inbox','待阅读']].map(([v,t])=>`<option value="${v}" ${v===(initial.status??n?.status)?'selected':''}>${t}</option>`).join('')}</select></label></div>`+field('published','内容发布时间',initial.published??n?.published)+field('tags','标签（逗号分隔，可选择已有标签）',initial.tags??n?.tags.join(', '))+`<div>${tags.map(t=>`<button type="button" data-add-tag="${esc(t.name)}">${esc(t.name)}</button>`).join(' ')}</div>`;
@@ -188,7 +192,14 @@ async function run(task,error=$('#notice')) {
   try{await task();}catch(e){if(e.name!=='AbortError'){error.hidden=false;error.textContent=e.message||'操作失败，文件没有被替换。';}}
   finally{busy=false;$('#edit-form').inert=false;}
 }
-function showSettings() {$('#current-folder').textContent=target?.mode==='local'?`当前文件夹：${target.name}`:'尚未选择资料库';$('#backup-folder').disabled=$('#export-md').disabled=target?.mode!=='local';$('#settings-error').textContent='';$('#settings').showModal();}
+function showSettings() {
+  if (!connected) { showSetup(); return; }
+  $('#setup').hidden = true;
+  $('#library').hidden = true;
+  $('#settings').hidden = false;
+  $('#current-folder').textContent = target.name;
+  $('#settings-error').textContent = '';
+}
 function exportMarkdown() {
   const text=notes.filter(n=>!n.deletedAt).map(n=>`# ${n.title}\n\n${n.sources.map(s=>s.url).join('\n')}\n\n${n.published?'内容发布时间：'+n.published+'\n\n':''}## 核心摘要\n\n${n.coreSummary?.text||''}\n\n${(n.coreSummary?.images||[]).map(i=>`![${i.name}](images/${i.key})`).join('\n')}\n\n${n.summary||''}\n\n${n.thought||''}\n\n${(n.images||[]).map(i=>`![${i.name}](images/${i.key})`).join('\n')}\n\n## 随读记录\n\n${n.clips.map(c=>`${quoteView(c).original}\n\n${quoteView(c).translation}\n\n${c.thought||''}\n\n${(c.images||[]).map(i=>`![${i.name}](images/${i.key})`).join('\n')}`).join('\n\n---\n\n')}\n\n## 后来的理解\n\n${(n.reviews||[]).map(r=>r.text).join('\n\n')}`).join('\n\n---\n\n');
   const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'}));a.href=url;a.download='Clips.md';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('#settings-error').textContent='Markdown 中的图片使用相对路径。将此文件放入资料库文件夹即可与 images/ 一起阅读。';
@@ -201,7 +212,7 @@ $('#open-trash').onclick=()=>location.assign(chrome.runtime.getURL('library.html
 $('#search').oninput=e=>{query=e.target.value.trim().toLowerCase();render();};$('#thoughts-only').onchange=render;
 $('#clear-filter').onclick=()=>{filter='';render();};$('#refresh').onclick=()=>run(refresh);$('#new-note').onclick=()=>run(()=>openEditor('new'));$('#manage-tags').onclick=()=>run(()=>openEditor('tags'));
 $('#choose-folder').onclick=()=>run(chooseFolder);$('#change-folder').onclick=()=>run(chooseFolder,$('#settings-error'));$('#reconnect-folder').onclick=()=>run(reconnect);
-$('#open-settings').onclick=showSettings;$('#close-settings').onclick=()=>location.assign(chrome.runtime.getURL('library.html'));$('#close-image').onclick=()=>$('#image-viewer').close();
+$('#open-settings').onclick=showSettings;$('#close-image').onclick=()=>$('#image-viewer').close();
 $('#backup-folder').onclick=()=>run(async()=>{const destination=await showDirectoryPicker({mode:'readwrite',id:'clips-backup'});const root=await folderHandle(target);await navigator.locks.request('clips-library:'+target.id,()=>copyLibrary(root,destination));$('#settings-error').textContent='完整备份已保存到 '+destination.name+'。';},$('#settings-error'));
 $('#export-md').onclick=()=>run(async()=>{await refresh();exportMarkdown();},$('#settings-error'));
 $('#edit-form').onsubmit=e=>{e.preventDefault();run(saveEdit,$('#editor-error'));};$('#edit-form').oninput=()=>void keepEdit();$('#close-editor').onclick=()=>run(closeEditor,$('#editor-error'));$('#editor').addEventListener('cancel',e=>{e.preventDefault();void run(closeEditor,$('#editor-error'));});
@@ -209,15 +220,14 @@ $('#rebase-editor').onclick=()=>run(async()=>{if(!editing?.pendingRevision)retur
 $('#add-images').onclick=()=>$('#image-files').click();$('#image-files').onchange=e=>{const files=[...e.target.files];e.target.value='';run(()=>addImages(files),$('#editor-error'));};
 $('#editor').onpaste=e=>{const files=transferImages(e.clipboardData);if(files.length&&!$('#image-tools').hidden){e.preventDefault();run(()=>addImages(files),$('#editor-error'));}};
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.clipsStorageTarget&&targetKey(changes.clipsStorageTarget.newValue)!==targetKey(target)){notice('资料库已切换。本页保留原资料库的草稿；请关闭后重新打开。');document.querySelectorAll('button').forEach(b=>b.disabled=true);}});
-await refresh();if(target?.mode==='local'&&connected){$('#setup').hidden=true;$('#library').hidden=true;showSettings();}const requestedNote=new URL(location.href).searchParams.get('note');if(requestedNote&&notes.some(n=>n.id===requestedNote)){detail=requestedNote;render();}if(new URL(location.href).searchParams.has('settings'))showSettings();
+await refresh(); if (connected) showSettings();
+const requestedNote=new URL(location.href).searchParams.get('note');if(requestedNote&&notes.some(n=>n.id===requestedNote)){detail=requestedNote;render();}
 
 const navigation=new URL(location.href).searchParams;
 if(['records','notes','inbox','archive','trash'].includes(navigation.get('view'))){view=navigation.get('view');render();}
 if(navigation.has('tag')){filter=navigation.get('tag');render();}
 if(navigation.has('new'))void run(()=>openEditor('new'));
 if(navigation.get('manage')==='tags')void run(()=>openEditor('tags'));
-
-$('#settings').addEventListener('cancel',e=>{e.preventDefault();location.assign(chrome.runtime.getURL('library.html'));});
 
 // Older releases used a separate editor. Keep pending edits recoverable without
 // migrating attachments or changing their revision baseline during an upgrade.

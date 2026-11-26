@@ -28,3 +28,176 @@
 
 /* Keep each record’s actions together, including when its metadata wraps. */
 .record-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-left:auto;max-width:100%;flex:0 0 auto}.record-actions .text-button{font-size:11px;line-height:1.5;padding:6px 0;white-space:nowrap}.reading-event-meta .record-actions .record-edit{margin-left:0;padding:6px 0}
+
+/* A note reads as a document. Its actions sit beside the section they affect. */
+.note-detail .detail-toolbar {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.note-detail .detail-toolbar .detail-kind { margin: 0; justify-content: flex-start; }
+.note-detail .detail-toolbar .detail-actions { margin-left: auto; flex-basis: auto; }
+
+.note-detail .detail-actions,
+.note-detail .core-summary > header > div {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.note-detail .detail-kind,
+.note-detail .publication-stamp,
+.note-detail .reading-event-meta time,
+.note-detail .timeline-entry time {
+  color: var(--muted);
+  font: 400 12px/1.5 var(--body, system-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.note-detail .note-title {
+  color: var(--ink);
+  font: 600 clamp(22px, 2vw, 30px)/1.4 var(--body, system-ui);
+  letter-spacing: normal;
+  text-wrap: wrap;
+}
+
+.note-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 15px;
+  margin-block: 10px 20px;
+}
+
+.note-metadata .detail-tags { margin: 0; min-width: 0; }
+.note-metadata .tag { overflow-wrap: anywhere; white-space: normal; }
+.note-metadata .publication-stamp { margin: 0; }
+
+.note-detail :is(.core-summary, .reading-log, .review-history, .saved-transcripts, .note-sources) {
+  margin: 0 0 24px;
+  padding: 17px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.note-detail :is(.section-heading, .source-heading, .core-summary > header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0 0 10px;
+}
+
+.note-detail :is(.section-heading, .source-heading, .core-summary, .saved-transcripts) h3 {
+  color: var(--ink);
+  font: 600 16px/1.5 var(--body, system-ui);
+  margin: 0;
+}
+
+.note-detail .section-heading h3 small {
+  margin-inline-start: 4px;
+  font: 400 12px/1.5 var(--body, system-ui);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.note-detail :is(.core-summary-text, .reading-log .prose, .timeline-entry .prose) {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.note-detail :is(.core-summary-text, .core-summary-meta, .source-list) { margin: 8px 0 0; }
+.note-detail .source-list a { padding: 3px 0; width: fit-content; max-width: 100%; }
+.note-detail .source-list a > span { font-size: 13px; }
+.note-detail .source-list a small { display: none; }
+.note-detail .source-list a:hover > span { text-decoration: underline; }
+
+.note-detail .reading-timeline { margin: 0; }
+.note-detail :is(.reading-event, .timeline-entry) {
+  border: 0;
+  margin: 0;
+  padding: 12px 0;
+}
+.note-detail :is(.reading-event, .timeline-entry) + :is(.reading-event, .timeline-entry) {
+  border-top: 1px solid var(--line);
+}
+
+.note-detail :is(.reading-event-dot, .timeline-dot) { display: none; }
+.note-detail .reading-event-meta { margin-bottom: 7px; }
+.note-detail .clip-thought { margin: 0; }
+.note-detail :is(.reading-log blockquote, .reading-log .clip-translation) {
+  margin: 6px 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.note-detail .event-quotation { margin-block: 6px; }
+.note-detail .event-quotation > summary {
+  width: fit-content;
+  max-width: 100%;
+  color: var(--accent);
+  font: 500 13px/1.7 var(--body, system-ui);
+  cursor: pointer;
+}
+.note-detail .clip-origin a { font-size: 12px; }
+.note-detail .reading-log-empty { padding: 3px 0; }
+.note-detail .record-actions { flex-wrap: wrap; }
+.note-detail .text-button:not(.danger) { color: var(--accent); }
+.note-detail :is(.text-button, .clip-anchor-link, .reflection-toggle) { font-size: 13px; }
+
+.editor-modal .editor-body { min-width: 0; }
+.editor-modal .title-input {
+  font: 550 clamp(20px, 2vw, 25px)/1.4 var(--body, system-ui);
+  color: var(--ink);
+  letter-spacing: normal;
+}
+.editor-modal .kind-picker {
+  gap: 2px;
+  padding: 0;
+  background: transparent;
+}
+.editor-modal .kind-picker button { font-size: 13px; color: var(--muted); }
+.editor-modal .kind-picker button.selected {
+  color: var(--accent);
+  background: var(--surface-muted, #e2e9e1);
+  box-shadow: none;
+}
+.editor-modal .new-record {
+  min-inline-size: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 12px 0 0;
+  margin-bottom: 16px;
+}
+.editor-modal .new-record legend { margin: 0; padding: 0 8px 0 0; font-size: 12px; }
+.editor-modal .new-record .remove-new-record { right: 0; }
+.editor-modal :is(.editor-field > span, .metadata-field > span, .metadata-source-heading) { font-size: 13px; }
+.editor-modal .new-record .editor-field { margin: 0 0 12px; }
+.editor-modal .new-records-heading { margin-bottom: 12px; }
+.editor-modal .new-records-heading h3 { font-size: 16px; }
+.editor-modal .new-records-heading + fieldset:only-of-type { border-top: 0; }
+.editor-modal .new-records-heading + fieldset:only-of-type legend {
+  position: absolute;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.editor-modal .editor-footer :is(.primary, .secondary) { font-size: 13px; }
+
+@media (max-width: 560px) {
+  .note-detail .detail-kind { justify-content: start; }
+  .note-detail .core-summary > header > div { gap: 4px 10px; }
+  .note-detail .detail-actions { gap: 4px; }
+  .note-detail .detail-actions .icon-button { min-width: 32px; }
+  .note-detail .core-edit-actions { flex-wrap: wrap; }
+  .editor-modal .editor-metadata { grid-template-columns: minmax(0, 1fr); }
+}

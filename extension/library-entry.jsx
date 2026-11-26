@@ -1,7 +1,8 @@
 import {createRoot} from 'react-dom/client';
 import {Component,useEffect,useRef,useState} from 'react';
 import Notebook from '@/app/notebook';
-import Sidebar from '@/app/sidebar';
+import LearningWorkspace from '@/app/learn/workspace';
+import {uniqueTags} from '@/app/tag-model';
 import {configureClient} from '@/app/client-runtime';
 import '@/app/globals.css';
 import './learning.css';
@@ -33,9 +34,13 @@ else{
 await start().catch(error=>{console.error('Clips library startup failed',error);root.render(<LibraryFailure/>);});
 function Learning(){
  const ref=useRef(null),[notes,setNotes]=useState([]),[tags,setTags]=useState([]);
- useEffect(()=>{let current=true;adapter.cloud({}).then(r=>{if(current){setNotes(r.notes);setTags(r.tagState.tags.map(t=>t.name));}}).catch(()=>{});
+ useEffect(()=>{let current=true;const refresh=()=>adapter.cloud({}).then(r=>{
+   if(!current)return;
+   setNotes(r.notes);
+   setTags(uniqueTags([...(r.tagState?.tags || []).map(t=>t.name),...r.notes.filter(n=>!n.deletedAt).flatMap(n=>n.tags || [])]));
+  }).catch(()=>{});void refresh();window.addEventListener('focus',refresh);
   const run=(action,input,onProgress)=>streamRequest({type:'LEARNING',action,input,context:targetKey(target)},onProgress);
-  const cleanup=mountLearning(ref.current,{draftStorage:adapter,request:r=>adapter.cloud(r),run,libraryURL:'library.html',noteURL:id=>'library.html?note='+id,chatId:new URL(location.href).searchParams.get('chat'),setChat:id=>history.replaceState(null,'','learning.html'+(id?'?chat='+id:'')),image:async key=>(await adapter.cloud({path:'/api/media?key='+encodeURIComponent(key)})).dataUrl,settings:()=>adapter.open(chrome.runtime.getURL('panel.html?settings=1'))});return()=>{current=false;cleanup();};
+  const cleanup=mountLearning(ref.current,{draftStorage:adapter,request:r=>adapter.cloud(r),run,libraryURL:'library.html',noteURL:id=>'library.html?note='+id,chatId:new URL(location.href).searchParams.get('chat'),setChat:id=>history.replaceState(null,'','learning.html'+(id?'?chat='+id:'')),image:async key=>(await adapter.cloud({path:'/api/media?key='+encodeURIComponent(key)})).dataUrl,settings:()=>adapter.open(chrome.runtime.getURL('panel.html?settings=1'))});return()=>{current=false;window.removeEventListener('focus',refresh);cleanup();};
  },[]);
- return <div className="app-shell"><Sidebar notes={notes} tags={tags} view="learn"/><div className="workspace library-learning-workspace"><div ref={ref} className="learn-root"/></div></div>;
+ return <LearningWorkspace notes={notes} tags={tags}><div ref={ref} className="learn-root"/></LearningWorkspace>;
 }

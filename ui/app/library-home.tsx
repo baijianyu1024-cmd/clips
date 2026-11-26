@@ -1,82 +1,158 @@
 "use client";
 import {request, draftStorage, MediaImage} from "./client-runtime";
-import DeleteRecord from "./delete-record";
+import RecordFeed from "./library-record-feed";
 import Markdown, { MarkdownHelp, MarkdownTextarea } from "./markdown";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Check, Loader2, Plus, Search, Star, Tags, X } from "lucide-react";
-import { kinds, titleOf, type Note } from "./model";
-import { libraryRecords, matchesRecord, type LibraryRecord } from "./library-records";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Check, ChevronDown, Loader2, Plus, Search, SlidersHorizontal, Star, X } from "lucide-react";
+import { kinds, type Note } from "./model";
+import { libraryRecords, matchesRecord, recordFilters, recordHasContent, type RecordFilter, type LibraryRecord } from "./library-records";
 import ReadingTimeline from "./reading-timeline";
 import LibraryShelf from "./library-shelf";
-import { formatPublicationMonth } from "./publication-month";
+import { DeskHeader } from "./sidebar";
 import CoreSummarySection from "./core-summary";
 import ReviewHistory from "./review-history";
 import "./library-home.css";
 
+export type RecordReturn = { key: string; limit: number; offset: number; filter: RecordFilter };
+type LibraryMode = "records" | "notes";
+type LibraryView = { mode: LibraryMode; filter: RecordFilter };
+
+function initialView(returnTo: RecordReturn | null): LibraryView {
+  if (returnTo) return { mode: "records", filter: returnTo.filter };
+  const tab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
+  let mode: LibraryMode = "notes", filter: RecordFilter = "all";
+  try {
+    const saved = JSON.parse(draftStorage.getItem("clips-library-view") || "null");
+    if (saved?.mode === "records") mode = "records";
+    if (Object.hasOwn(recordFilters, saved?.filter)) filter = saved.filter;
+    else if (saved?.only === true) filter = "thought";
+  } catch { /* The library is usable when local preferences are unavailable. */ }
+  return { mode: tab === "records" || tab === "notes" ? tab : mode, filter };
+}
+
 type Props = {
+  recordNotes: Note[]; recordReturnRef: React.RefObject<RecordReturn | null>;
   notes: Note[]; library: Note[]; query: string; onQuery: (v: string) => void;
-  onTags: () => void;
-  kind: string; onKind: (v: string) => void; tag: string; onClearTag: () => void;
-  status: string; onStatus: (v: "all" | "reading" | "read") => void; starred: boolean; onStarred: () => void;
+  navigation: ReactNode; onRefresh: () => void;
+  kind: string; onKind: (v: string) => void; tag: string;
+  status: "all" | "reading" | "read"; onStatus: (v: "all" | "reading" | "read") => void; starred: boolean; onStarred: () => void;
   onOpen: (n: Note) => void; onEdit: (n: Note) => void; onUpdate: (n: Note) => void; onCreate: () => void;
   searchRef: React.RefObject<HTMLInputElement | null>; onDeleteNote: (n: Note) => void;
 };
 const imageUrl = (key: string) => `/api/media?key=${encodeURIComponent(key)}`;
-const day = (at?: string) => at ? new Date(at).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" }) : "时间未记录";
-const time = (at?: string) => at ? new Date(at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
-
 export default function LibraryHome(p: Props) {
-  const [mode, setMode] = useState<"records" | "notes">("notes");
-  const [only, setOnly] = useState(false);
-  const [limit, setLimit] = useState(60);
+  const [{ mode, filter }, setView] = useState(() => initialView(p.recordReturnRef.current));
   const [editing, setEditing] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const rows = useMemo(() => libraryRecords(p.notes), [p.notes]);
-  const total = useMemo(() => libraryRecords(p.library).length, [p.library]);
-  const matching = useMemo(() => rows.filter(r => matchesRecord(r, p.query, mode === "records" && only)), [rows, p.query, only, mode]);
+  const documentRef = useRef<HTMLDivElement>(null);
+  const sourceNotes = mode === "records" ? p.recordNotes : p.notes;
+  const rows = useMemo(() => libraryRecords(sourceNotes), [sourceNotes]);
+  const matching = useMemo(() => mode === "records" ? rows.filter(r => recordHasContent(r, filter) && matchesRecord(r, p.query)) : [], [mode, rows, filter, p.query]);
+  const pageKey = JSON.stringify([p.query, p.kind, p.tag, p.status, p.starred, mode, filter]);
+  const [page, setPage] = useState(() => ({ key: pageKey, limit: p.recordReturnRef.current?.limit ?? 60 }));
+  const limit = page.limit;
+  if (page.key !== pageKey) setPage({ key: pageKey, limit: 60 });
 
-  useEffect(() => { try { const saved = JSON.parse(draftStorage.getItem("clips-library-view") || "null"); if (saved?.mode === "records" || saved?.mode === "notes") setMode(saved.mode); setOnly(saved?.only === true); } catch {} }, []);
-  useEffect(() => { setLimit(60); }, [p.query, p.kind, p.tag, p.status, p.starred, only, mode]);
-  function choose(next: typeof mode, thoughts = only) { setMode(next); setOnly(thoughts); try { draftStorage.setItem("clips-library-view", JSON.stringify({ mode: next, only: thoughts })); } catch {} }
-  const clearFilters = () => { p.onQuery(""); p.onKind(""); p.onClearTag(); p.onStatus("all"); if (p.starred) p.onStarred(); choose(mode, false); };
-  const filtered = !!(p.query || p.kind || p.tag || p.status !== "all" || p.starred || (mode === "records" && only));
-  const matchingIds = new Set(matching.map(r => r.note.id));
-  const overviewNotes = filtered ? (mode === "records" && only ? p.notes.filter(n => matchingIds.has(n.id)) : p.notes) : p.library;
-  const reading = overviewNotes.filter(n => n.status === "reading").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const groups = new Map<string, LibraryRecord[]>();
-  for (const r of matching.slice(0, limit)) { const label = day(r.at); groups.set(label, [...(groups.get(label) || []), r]); }
-  return <section className="library-home" aria-label="笔记库">
-    <div className="library-heading"><h1>笔记库</h1><div className="library-overview">{filtered && <span className="library-scope">当前筛选</span>}<span><b>{overviewNotes.length}</b> 篇笔记</span><span><b>{filtered ? matching.length : total}</b> 条记录</span></div><button className="primary compact library-add" onClick={p.onCreate}><Plus size={14}/>添加笔记</button></div>
-    {mode === "records" && reading.length > 0 && <div className="library-continue"><span>继续阅读</span>{reading.slice(0, 3).map(n => <button key={n.id} onClick={() => p.onOpen(n)} title={titleOf(n)}><span>{titleOf(n)}</span><ArrowUpRight size={12}/></button>)}{reading.length > 3 && <button onClick={() => { p.onStatus("reading"); choose("notes"); }}>全部 {reading.length} 篇</button>}</div>}
-    <div className="library-toolbar"><div className="library-tabs" role="group" aria-label="笔记库视图"><button aria-pressed={mode === "notes"} onClick={() => choose("notes")}>按篇笔记</button><button aria-pressed={mode === "records"} onClick={() => choose("records")}>全部记录</button></div><div className="library-tools"><label className="library-search"><Search size={14}/><input ref={p.searchRef} aria-label="搜索笔记和记录" placeholder="搜索文章、想法、摘录…" value={p.query} onChange={e => p.onQuery(e.target.value)}/>{p.query && <button aria-label="清除搜索" onClick={() => p.onQuery("")}><X size={12}/></button>}</label>{mode === "records" && <label className="library-only"><input type="checkbox" checked={only} onChange={e => choose(mode, e.target.checked)}/>只看我的想法</label>}<button className="library-tags-button" onClick={p.onTags} aria-label="标签管理与筛选" aria-pressed={!!p.tag}><Tags size={14}/>标签</button><details className="library-filter-menu"><summary>筛选{p.kind || p.status !== "all" || p.starred ? " ·" : ""}</summary><div><label>来源<select aria-label="来源类型" value={p.kind} onChange={e => p.onKind(e.target.value)}><option value="">所有来源</option>{Object.entries(kinds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label><label>阅读状态<select aria-label="阅读状态筛选" value={p.status} onChange={e => p.onStatus(e.target.value as "all" | "reading" | "read")}><option value="all">全部</option><option value="reading">正在读</option><option value="read">已读完</option></select></label><label><input type="checkbox" checked={p.starred} onChange={p.onStarred}/><Star size={13}/>仅星标</label></div></details></div></div>
-    {filtered && <div className="library-filter-result"><span>{mode === "records" ? `${matching.length} 条记录` : `${p.notes.length} 篇笔记`}</span>{p.tag && <button className="library-tag-chip" aria-label="清除标签筛选" onClick={p.onClearTag}><span># {p.tag}</span><X size={12}/></button>}<button onClick={clearFilters}>清除筛选</button></div>}
-    <div className="library-document">
-      {mode === "records" ? [...groups].map(([date, entries]) => <section className="library-day" key={date}><h2>{date}</h2>{entries.map(r => { const published = formatPublicationMonth(r.note.published); return <article className="library-record" key={r.key} data-record-key={r.key}><div className="library-record-meta">{r.at && <time dateTime={r.at}>{time(r.at)}</time>}<button className="library-source" onClick={() => p.onOpen(r.note)}>{titleOf(r.note)}<ArrowUpRight size={12}/></button><span>{r.label}{r.images.length > 0 && ` · ${r.images.length} 张`}</span>{published && <span className="content-published">发布于 {published}</span>}{editing !== r.key && <button className="library-edit" onClick={() => setEditing(r.key)}>编辑</button>}<DeleteRecord note={r.note} kind={r.type} id={r.id} onUpdate={p.onUpdate} onDeleted={() => setEditing(null)}/></div>{editing === r.key ? <RecordEditor record={r} onUpdate={p.onUpdate} onClose={() => setEditing(null)} onPreview={setLightbox}/> : <RecordContent record={r} onPreview={setLightbox}/>}</article>; })}</section>) : <LibraryShelf notes={p.notes} records={rows} limit={limit} onOpen={p.onOpen} onEdit={p.onEdit} onDelete={p.onDeleteNote}/>}
-      {(mode === "records" ? !matching.length : !p.notes.length) && <div className="library-empty"><p>{filtered ? (mode === "records" ? "没有符合条件的记录" : "没有符合条件的笔记") : p.library.length ? "还没有摘要、截图或想法" : "暂无笔记"}</p>{filtered ? <button className="secondary compact" onClick={clearFilters}>清除筛选</button> : <button className="secondary compact" onClick={p.onCreate}><Plus size={14}/>添加笔记</button>}</div>}
-      {(mode === "records" ? matching.length > limit : reading.length > limit || p.notes.length - reading.length > limit) && <button className="secondary compact library-more" onClick={() => setLimit(n => n + 60)}>加载更多</button>}
+  function findRecord(key: string) {
+    return Array.from(documentRef.current?.querySelectorAll<HTMLElement>("[data-record-key]") || [])
+      .find(el => el.dataset.recordKey === key);
+  }
+  useLayoutEffect(() => {
+    const target = p.recordReturnRef.current;
+    if (!target || mode !== "records" || limit < target.limit) return;
+    const row = findRecord(target.key);
+    p.recordReturnRef.current = null;
+    if (row) {
+      window.scrollBy(0, row.getBoundingClientRect().top - target.offset);
+      row.querySelector<HTMLElement>(".library-source")?.focus({ preventScroll: true });
+    }
+  }, [mode, limit, p.recordReturnRef]);
+
+  function choose(next: LibraryMode, nextFilter = filter) {
+    if (next === mode && nextFilter === filter) return;
+    setView({ mode: next, filter: nextFilter });
+    setEditing(null);
+    try { draftStorage.setItem("clips-library-view", JSON.stringify({ mode: next, filter: nextFilter, only: nextFilter === "thought" })); } catch {}
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tab") !== next) {
+      url.searchParams.set("tab", next);
+      window.history.replaceState(window.history.state, "", url);
+    }
+  }
+  function openFromFeed(row: LibraryRecord) {
+    const element = findRecord(row.key);
+    if (element) p.recordReturnRef.current = { key: row.key, limit, offset: element.getBoundingClientRect().top, filter };
+    window.scrollTo(0, 0);
+    p.onOpen(row.note);
+  }
+  const filtered = Boolean(p.query || p.kind || p.tag || p.status !== "all" || p.starred || (mode === "records" && filter !== "all"));
+  const readingCount = p.notes.filter(n => n.status === "reading").length;
+  return <section className="library-home library-desk" aria-label="笔记库">
+    <DeskHeader title={p.tag ? `# ${p.tag}` : "笔记库"} navigation={p.navigation} onRefresh={p.onRefresh} onCreate={p.onCreate}
+      count={mode === "notes" ? `${p.notes.length} 篇` : `${matching.length} 条记录`}/>
+    <div className="library-toolbar">
+      <div className="library-tabs" role="group" aria-label="笔记库视图">
+        <button aria-pressed={mode === "notes"} onClick={() => choose("notes")}>按篇笔记</button>
+        <button aria-pressed={mode === "records"} onClick={() => choose("records")}>全部记录</button>
+      </div>
+      <div className="library-tools">
+        <label className="library-search">
+          <Search size={15}/>
+          <input ref={p.searchRef} type="search" aria-label="搜索笔记和记录" placeholder="搜索文章、想法、摘录…" value={p.query} onChange={e => p.onQuery(e.target.value)}/>
+          {p.query && <button type="button" aria-label="清除搜索" onClick={() => { p.onQuery(""); p.searchRef.current?.focus(); }}><X size={13}/></button>}
+        </label>
+        <ShelfFilters kind={p.kind} onKind={p.onKind} status={p.status} onStatus={p.onStatus} starred={p.starred} onStarred={p.onStarred}/>
+      </div>
+    </div>
+    {mode === "records" && <div className="record-filters" role="group" aria-label="记录内容">
+      {(Object.keys(recordFilters) as RecordFilter[]).map(value =>
+        <button key={value} type="button" aria-pressed={filter === value}
+          onClick={() => choose("records", value)}>{recordFilters[value]}</button>)}
+    </div>}
+    <div ref={documentRef} className="library-document">
+      {mode === "records" ? <RecordFeed records={matching.slice(0, limit)} onOpen={openFromFeed}
+        onUpdate={p.onUpdate} editing={editing} onEdit={setEditing} onPreview={setLightbox}
+        renderEditor={r => <RecordEditor record={r} onUpdate={p.onUpdate} onClose={() => setEditing(null)} onPreview={setLightbox}/>}/> : <LibraryShelf notes={p.notes} records={rows} limit={limit} onOpen={p.onOpen} onEdit={p.onEdit} onDelete={p.onDeleteNote}/>}
+      {(mode === "records" ? !matching.length : !p.notes.length) && <div className="library-empty">
+        <p>{filtered ? (mode === "records" ? "没有符合条件的记录" : "没有符合条件的笔记") : p.library.length ? "还没有摘要、截图或想法" : "暂无笔记"}</p>
+        {!filtered && <button className="secondary compact" onClick={p.onCreate}><Plus size={14}/>新建笔记</button>}
+      </div>}
+      {(mode === "records" ? matching.length > limit : readingCount > limit || p.notes.length - readingCount > limit) && <button className="secondary compact library-more" onClick={() => setPage({ key: pageKey, limit: limit + 60 })}>加载更多</button>}
     </div>
     {lightbox && <ImagePreview image={lightbox} onClose={() => setLightbox(null)}/>}
   </section>;
 }
 
-function RecordContent({ record: r, onPreview, preview = false }: { record: LibraryRecord; onPreview: (key: string) => void; preview?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const [long, setLong] = useState(false);
-  const content = useRef<HTMLDivElement>(null);
+function ShelfFilters(p: Pick<Props, "kind" | "onKind" | "status" | "onStatus" | "starred" | "onStarred">) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
-    const el = content.current;
-    if (!el || expanded) return;
-    const measure = () => setLong(el.scrollHeight > el.clientHeight + 1);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-    el.addEventListener("load", measure, true);
-    return () => { observer.disconnect(); el.removeEventListener("load", measure, true); };
-  }, [r.text, r.thought, r.translation, expanded, preview]);
-  const source = <>{r.text && <Markdown className="library-copy">{r.text}</Markdown>}{r.translation && <div className="library-translation"><small>中文译文</small><Markdown className="library-copy">{r.translation}</Markdown></div>}{r.pending && <p className="library-placeholder">中文译文待补齐</p>}</>;
-  return <><div ref={content} className={!expanded || preview ? "library-clamped" : ""}>{r.thought ? <Markdown className="library-copy">{r.thought}</Markdown> : source}</div>{long && !preview && <button className="library-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "收起" : "展开全文"}</button>}{r.thought && (r.text || r.translation || r.pending) && !preview && <details className="library-quote"><summary>关联摘录</summary><blockquote>{source}</blockquote></details>}{r.images.length > 0 && <div className="library-images">{r.images.slice(0, preview ? 3 : r.images.length).map(img => <button key={img.key} onClick={() => onPreview(img.key)} aria-label={`放大图片：${img.name}`}><MediaImage src={imageUrl(img.key)} alt={img.name} loading="lazy"/><span>放大</span></button>)}{preview && r.images.length > 3 && <span className="library-placeholder">共 {r.images.length} 张</span>}</div>}</>;
+    if (!open) return;
+    const closeOutside = (e: PointerEvent) => {
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) ref.current.open = false;
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [open]);
+  const active = Boolean(p.kind || p.status !== "all" || p.starred);
+  return <details ref={ref} className="library-filter-menu" data-active={active}
+    onToggle={e => setOpen(e.currentTarget.open)}
+    onKeyDown={e => { if (e.key === "Escape" && ref.current?.open) { ref.current.open = false; ref.current.querySelector("summary")?.focus(); } }}>
+    <summary><SlidersHorizontal size={14}/>筛选<ChevronDown size={12}/></summary>
+    <div>
+      <label>来源<select aria-label="来源类型" value={p.kind} onChange={e => p.onKind(e.target.value)}>
+        <option value="">所有来源</option>{Object.entries(kinds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+      </select></label>
+      <label>阅读状态<select aria-label="阅读状态筛选" value={p.status} onChange={e => p.onStatus(e.target.value as Props["status"])}>
+        <option value="all">全部</option><option value="reading">正在读</option><option value="read">已读完</option>
+      </select></label>
+      <label><input type="checkbox" checked={p.starred} onChange={p.onStarred}/><Star size={13}/>仅星标</label>
+      {active && <button type="button" className="reset-shelf-filters" onClick={() => {
+        p.onKind(""); p.onStatus("all"); if (p.starred) p.onStarred();
+      }}>重置筛选</button>}
+    </div>
+  </details>;
 }
 
 function RecordEditor({ record: r, onUpdate, onClose, onPreview }: { record: LibraryRecord; onUpdate: (n: Note) => void; onClose: () => void; onPreview: (key: string) => void }) {

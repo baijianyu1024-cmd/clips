@@ -41,6 +41,38 @@ md.renderer.rules.clips_checkbox = (tokens, i) => `<input type="checkbox" disabl
 /** @param {string | null | undefined} text */
 export function renderMarkdown(text) { return md.render(String(text ?? '')); }
 
+/** A feed preview ends at a Markdown boundary. Only a text paragraph can be line-clamped. */
+export function renderRecordPreview(text) {
+  const env = {};
+  const tokens = md.parse(String(text ?? ''), env);
+  const render = part => md.renderer.render(part, md.options, env);
+  const html = render(tokens);
+  const preview = { html, previewHtml: html, clampParagraph: false };
+  // Keep leading headings with the first content block.
+  const starts = tokens.filter(t => t.level === 0 && t.nesting >= 0);
+  const first = starts.find(t => t.type !== 'heading_open' && t.type !== 'hr');
+  if (!first) return preview;
+  const next = starts[starts.indexOf(first) + 1];
+  const end = next ? tokens.indexOf(next) : tokens.length;
+  let visible = tokens.slice(0, end);
+
+  if (first.tag === 'pre' || first.tag === 'code' || first.tag === 'table') {
+    preview.previewHtml = '';
+    return preview;
+  }
+  if (first.tag === 'ul' || first.tag === 'ol') {
+    const items = visible.filter(t => t.type === 'list_item_open' && t.level === first.level + 1);
+    if (items.length > 2) {
+      visible = [...visible.slice(0, visible.indexOf(items[2])), visible.at(-1)];
+    }
+  } else if (first.tag === 'p') {
+    // An inline Markdown image renders as a block in Clips. Keep it intact.
+    preview.clampParagraph = !visible.some(t => t.children?.some(child => child.type === 'image'));
+  }
+  if (next || visible.length !== tokens.length) preview.previewHtml = render(visible);
+  return preview;
+}
+
 /** Plain text for compact cards and buttons, without nesting interactive markup.
  * @param {string | null | undefined} text
  */

@@ -1,13 +1,16 @@
 {
-  "version": 1,
+  "version": 2,
   "ui": [
     "app/client-runtime.tsx",
     "app/core-summary.tsx",
     "app/globals.css",
     "app/library-home.css",
     "app/library-home.tsx",
+    "app/library-record-feed.tsx",
+    "app/library-record-feed.css",
     "app/library-records.ts",
     "app/library-shelf.tsx",
+    "app/library-desk-shelf.css",
     "app/library.css",
     "app/markdown.tsx",
     "app/model.ts",
@@ -36,8 +39,24 @@
     "lib/reader/source.ts",
     "lib/transcript-assist-model.ts",
     "lib/transcript-model.ts",
-    "app/delete-record.tsx"
+    "app/delete-record.tsx",
+    "app/desk-shell.css",
+    "app/learn/workspace.tsx"
   ],
+  "uiVariants": {
+    "app/library-home.tsx": {
+      "reference": "ab7ce350c41d77ee1795596cc250552575167ccd4b1f83a8d04a6dea6d87646a",
+      "reason": "Public release uses the new note creation label."
+    },
+    "app/notebook.tsx": {
+      "reference": "304523f92bbebbc35aea2d0fb2585edfe4ad8a28327b29bb3ddcd9db072363ff",
+      "reason": "Public release preselects a removable tag when creating a note from that tag and returns to that scope."
+    },
+    "app/sidebar.tsx": {
+      "reference": "715893f037bfb94e330861b95c7cae7517d5820c8b8f32e2fdd94db825676ec5",
+      "reason": "Public release uses the new note creation label."
+    }
+  },
   "shared": [
     "ai-stream.js",
     "content-edit.js",
@@ -51,7 +70,6 @@
     "learning-engine.js",
     "learning-model.js",
     "learning-retrieval.js",
-    "learning-ui.js",
     "learning.css",
     "learning.html",
     "library-entry.jsx",
@@ -66,7 +84,6 @@
     "note-tags.js",
     "page-content.js",
     "panel.css",
-    "panel.html",
     "preview.css",
     "preview.js",
     "queue-links.js",
@@ -100,7 +117,8 @@
     "agent.css",
     "agent.html",
     "record-actions.js",
-    "summary-pipeline.js"
+    "summary-pipeline.js",
+    "desk-theme.css"
   ],
   "variants": {
     "learning-local.js": {
@@ -108,7 +126,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "preview.html": {
-      "reference": "ab831cdf2dcb1046cc04ed5e862727f39f818adbc87043c887f52221b38be39c",
+      "reference": "ab18651e2f5def0f9fbc95011a569422cb8c822eeb3e7ece9c53e6fbdf20e11d",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "adapter.js": {
@@ -116,7 +134,7 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.html": {
-      "reference": "ce5c12f925104326f0fe517ddbd517c877ef486f1e95d95164daae060e615925",
+      "reference": "349ef7c5c8f873a01dc4dbdb3ab481ebb37dcca8b4a4152905848f931683b4a9",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "core.js": {
@@ -152,38 +170,46 @@
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
     },
     "storage.js": {
-      "reference": "defb4b50eadf465fcf4f439384111268f7bf5f179492e0c36688baecc326eb84",
+      "reference": "4209aa95cce248408b8f4951b85bb9ff1fc5c2e6064c3ba233b4614b2901851d",
       "reason": "Storage routing, private cloud connection, or legacy compatibility; shared feature code is checked separately."
+    },
+    "panel.html": {
+      "reference": "c48ac1ac7b2832c44dba32a457fff3806e51560145f0045ad3cef99dafa1c37e",
+      "reason": "The public release reads the version shown in the panel from its own manifest."
+    },
+    "learning-ui.js": {
+      "reference": "0fc27467bc59189e15badc455811d9e9cd9609cd7567fd2e9f285087eb027071",
+      "reason": "Public release uses the new note creation label in the chat header."
     }
   },
   "public": {
     "ui/app/client-runtime.tsx": "cf38a02b216acb7d91483fdd3c54cf4b0e20ce330d35c34b7b982fc0ae1e6104",
-    "ui/app/core-summary.tsx": "196f48a8c9df41427351f3879da13c351cf2c9768568abe458bc2daff9e6b1d4",
+    "ui/app/core-summary.tsx": "119550e9de1fa271d7a99d927d94faed6b021e0d16db7f0c73a727e0fba19245",
     "ui/app/globals.css": "1077550e87a84724d768a37f929c363e8352a71bf626f96327ffa31e466d6216",
-    "ui/app/library-home.css": "94da621b6845573ae82ec6093210fa345be4ccb8f75aa77feb350783d112b684",
-    "ui/app/library-home.tsx": "8e68fd45cc7ba910b7bd9cf3d53f2b14bff92eba9e627960ac0a806951bfead9",
-    "ui/app/library-records.ts": "7db62a410b2fe2cd3be13faed9dcba23599ee7712ffcb3e0d74ca5f699d7c42f",
+    "ui/app/library-home.css": "50b7bf6adf0fd593ee439a5042283cd1e429dc4bc41fef97bab560e954c08d42",
+    "ui/app/library-home.tsx": "ce6a05876c3fcf507ffb2e09f9b35e2042ca881f4701b8fc343b92910b5faa44",
+    "ui/app/library-records.ts": "6ef465c40c041d8302edce32050e3f6456a89c248b45290000286e914db7f6ba",
     "ui/app/library.css": "14c0bd1937984bdb61698d1dbc63b9504da8c3175e948f6f0fa734a51c0d89e1",
     "ui/app/markdown.tsx": "93e69f9f5dc8bed2637fbfbb589ebd876d51fce3ba2f43b4c0241a8928c74aca",
     "ui/app/model.ts": "2283b68dd26edc30f2c72f106e21315e480f88c6fa7b58a1fc5521f016415596",
-    "ui/app/note-content.css": "906e0100c48b60a2fe82a39b7e4efeb9a667e7c0f460218eea0e37289a44f9f6",
-    "ui/app/notebook.tsx": "69f1fa35f09c46ff6cf643bbec7375ea396350deef4a8ac87a7336420ba23fd1",
+    "ui/app/note-content.css": "638fd991978a4f814f0f19d2571fba9d3aff16e7a1d017bc15b45b833ecf78e1",
+    "ui/app/notebook.tsx": "76a0ca7b7113629421953e88ff2578436e51db2c07c13d8854be113629b9ddfd",
     "ui/app/queue-titles.ts": "3e35aea809045ca1b4837de4faaac17c3a89d1b7fab87f8551b0eabc8aa5ad80",
-    "ui/app/reading-queue.css": "4b51a3de9dbdd818d4cde86dea89e022cc3698383521309dc5f5a16822b1f930",
-    "ui/app/reading-queue.tsx": "43b8186a1bec76227925a373fa80ed0c7e75cea7c06146f700b3c9e40e5f8864",
-    "ui/app/reading-timeline.tsx": "bf9402a7957a0c56c19ec0f0206980ed7f1ebeb606300dabf9c768ba4f95cda0",
+    "ui/app/reading-queue.css": "c9fc066a9babc9642273ea9bcfed501dc0d315ffab9a57e54b69aeeba89fc4d0",
+    "ui/app/reading-queue.tsx": "88e5b7ab08f978bc0562c7220a19309364f0f8b2e605ae4059cdde3567a47af2",
+    "ui/app/reading-timeline.tsx": "c61b87336bc40085bf944037b41b7217b3c5ab21d8ca6b638021624f5fa0c8b5",
     "ui/app/reflection-form.tsx": "16315203141ee057fbf19035cd274ddbc78756db31bf3117aee5752605bfe549",
     "ui/app/review-history.tsx": "a61b04a94ea8b18d393c1c4adea57db257d949bfbf76bb3e86a97b1fcac278f4",
-    "ui/app/sidebar.tsx": "c8954e6ea047d57ea4bc1bbddbc3c9615f9d8e4acf3f557b9d4ee421816786ea",
-    "ui/app/source-reader.css": "7b5a0113052ad630004b0d84d878231b74a3c108d7ef46419079204d82272a0b",
-    "ui/app/source-reader.tsx": "f90a7a22bdea536cd447059254d4c02f30ba453a02d2e73d984788fdbb16db75",
-    "ui/app/tag-manager.css": "c41f675e7b50a8258bf1c9a8564334963e9dd795d72addc430b626a1ef2eccdb",
-    "ui/app/tag-manager.tsx": "3bb5e3645a0eb9dc99b87beb7f00ea429dd29c1c84e1f481c7d6468c1ab40eea",
+    "ui/app/sidebar.tsx": "4f3e3aefd9113617cec3f0bb87a3fc07e7263d76a37347d16457dd117158b3ca",
+    "ui/app/source-reader.css": "5899c12c14aef6b48df8e120c7dbf43e827dfdc2377ddd8c231d6eddeead7dbe",
+    "ui/app/source-reader.tsx": "7f13f0ee450106292af3f5bd1be4c6908febdc3ca90d5c642390dd6eaf38d42b",
+    "ui/app/tag-manager.css": "990e85af1195aa40153c90fcdd2fb6385b5973f6bf7d1837d1848b04261e24ef",
+    "ui/app/tag-manager.tsx": "01fbdc3f6f23f32cf51a669fc442f4e140942e86a4d4f57f2df95601c72c1213",
     "ui/app/tag-model.ts": "7562fc82964330e6a0fb3c28bf0a51b238d36d8abc13fe5096b51392f68cac69",
-    "ui/app/tag-picker.css": "7e3fe54b4c40d5e524a18a4507ecd877a76488f265a7fc735296b967a51ca405",
+    "ui/app/tag-picker.css": "fb56423fe25c7c639a0d6c5710d32aa6424d5b937b349f664ed3581674cb17bd",
     "ui/app/tag-picker.tsx": "288acc0f0792180f28454860c6f72152811427c735d7b0e4dc814d7329aa4f59",
-    "ui/app/transcript-reader.css": "720411a87235d75d29684afe1e904387b23d09b34a653eb845300f6d0ffca834",
-    "ui/app/transcript-reader.tsx": "58c6e6a5d43f9847af19699c04568b93a73b987d76f5ddfed23ba4c0c2b1ecca",
+    "ui/app/transcript-reader.css": "b1d83c49ef756fac3deeb686e488bb83843c630678d2203002de459f59e90a09",
+    "ui/app/transcript-reader.tsx": "47a006702d7a0426e66ff7a8a0b510ba374f5b08ab763dbe682ccef9cbff033c",
     "ui/lib/links.ts": "3e58887544a991af0bb77e9554d1931db3b8b0c1b9185f6c1c50c958f63fb15f",
     "ui/lib/reader/import.ts": "0ab671dc8e80140c39a0c8e19108a5581cb936251913c11e82b5877c0e7a8682",
     "ui/lib/reader/model.ts": "d3b9355d4b9a030093cf394a499f04861e9f828c1552529b13a3a20159cd6d24",
@@ -194,25 +220,25 @@
     "extension/quote-translation.js": "b768cf244c8db51072f6d3a6a0c00219eb50d35937973aafde9ed5bf2b1c465e",
     "extension/content-edit.js": "77d015316b8739e845d45e7cf6247f8a49686272667d9c9f55e23e754f865c97",
     "extension/library-platform.js": "5062fedd38c70f6ee6d73ba9f72fa79b1cfb4e1adf2685f093aee875613f7375",
-    "extension/preview.html": "b3cc3758463723cca352e2800dfea9631d845e784d21d1638f38c5e708818f38",
+    "extension/preview.html": "3fe8e2063168fe5535b47c0262c151ad07d03150ec5e1d985d748a55494f32c6",
     "extension/adapter.js": "928fce33dece2d2407aeaee7fc147e45cb00308be445e0c50f5afa999709a01a",
     "extension/quote-context.js": "43a7482cf724f1f8c884cafeb428c86b2293b9a8c8740134b8286fb64479b3d7",
     "extension/markdown-editor.js": "046b44dffb499c42cc3645fe52f38f32d4123a7510e5944c5ab210d6ff854c2a",
-    "extension/library.css": "6a30f91c4a22eb1c59f441848479a7cfeee1e3ab06761873610ed7c35ed5153d",
+    "extension/library.css": "bcb29644a1b7584142c7c6e4dc2ff7764275427eb572b790c5b935fa753aaca4",
     "extension/transcript-assistant.js": "f7b2f322caa78714d2c5b3b0c522b6aae403f411c78919418dc4fdbdbdc225e0",
     "extension/transcript-ai.js": "a0ac8be7ad2491040d246f8de177e8e0d3fe679e3431831ac25a3237ee7455ba",
-    "extension/storage.html": "96ecd3d83db0b03fd290bb687194a9a0ca7d104e34dc7030b37559757f38b1d5",
+    "extension/storage.html": "7a4bf72b13bb34671546b64263861c12ab1e3478280abd4cd478f46158ec7883",
     "extension/link-metadata.js": "c2729bd147d56e8d9ada5273da200e7a88e9c257ea95c28d6253c67e4daa9f4b",
     "extension/youtube-entry.js": "617b5b8cbe005a347bdd26bf565221bc767aa46f125fc93284da89f30a229f3c",
     "extension/learning-engine.js": "649d1f0345c06412aca4e2a57a34851f77a083d8099514657e671fa80f8f99d6",
     "extension/core.js": "8dcf9f6ef89f5f0a526a903631c6b764ba8475831af592daec0cc35b4ecdf563",
     "extension/background.js": "862e4f2b03f49a3d1e16a1472bcc5e8fe433eb8b9a411087d599c65fe344e602",
     "extension/queue-title-sync.js": "22e0c268a2e7d84cbd8e5e654e80ece69ed6fa637ba106ebc3d1cd998a098edf",
-    "extension/library-entry.jsx": "c93a1fea2f8e14e52b32e122643ea09ae6ab4d5a10258bc284b8129ae4161d5c",
+    "extension/library-entry.jsx": "e4d3e0bad2edbe3dbbca784722cc7688d5d0a23446b43a40c24ef4b1ba339772",
     "extension/learning.html": "7d612163d73f4e8659f514e2fbb12aec0e74953637fa637081afaac45dc2ded6",
     "extension/note-tags.js": "5847af5c5f47ba5086903e83c565fecead73c325e8d6c9862e829107d60c73c4",
-    "extension/preview.css": "6fddd33b374b9506d2a8b30ceb997b50c41cf3b8e92c8bf67653e7ef3d6fb4ce",
-    "extension/learning.css": "e4cfb79c8f4f21b1adc75ce962d6bc5f29d8a108f82e1f16e92e877b545133a6",
+    "extension/preview.css": "d5d45bc8815d8c2c48e9bc2c211323691b7e7c627915753cdf780d8eb62a3d26",
+    "extension/learning.css": "657d0aefdfd4fd098ca12efb829ddf2cad35955253607d4f5f6d0b68d2ce98e4",
     "extension/markdown.css": "15b03134f147d771e1208d77d60fe540993e1b0ae0d66710b576b4cbacf958fa",
     "extension/reading-tools.js": "44e127744369f29be8f0b7be691d91bff2134018359e072b6d01baca7b2c0ad2",
     "extension/preview.js": "064a53f639265abe5ae204f611f3112ed84ada569df43dd420f482825610ae08",
@@ -223,7 +249,7 @@
     "extension/youtube.js": "ae7aadb7844d5c02a28f42c86914621a78a33fdb6f9cfc5a3ad7ad732bb84084",
     "extension/record-editor.js": "ea7c21e8f8aa9d33255549aa3010b1e6ec891e58045e7508a882ba33fbb3de6e",
     "extension/save-context.js": "a1495dce554e2ba77016f7c7c995a1ca0ade0292a08cadd6c2c6b32ac1ec7e4a",
-    "extension/panel.js": "83c92d8669cbb0fa8c1dbe4c7aa8d427eacaf000c7fca533219eb27c118e42e5",
+    "extension/panel.js": "5f2b6b1c73cea77eadc1b7845ea3c6797aa6d750cf4834aedffc735baf5e984c",
     "extension/draft-store.js": "cb0e59d36aa568ce9c7efedf85a9df4baa0c53923f15be2b5befae622c02d8d4",
     "extension/note-fields.js": "a2c191fa3c0b7a67672544b591a8f3777add8e7b63af210b6c5689c55f265f5c",
     "extension/transcript-panel.js": "7fd4f958d1e7acd0d5966dc2887481c446717410efbe494b7bb90873f892f8ab",
@@ -234,9 +260,9 @@
     "extension/storage-target.js": "cdf5e9778b829c8d783fe0b4bfa6fce1bca341a6ac46377c83da5fe4adff66fd",
     "extension/THIRD_PARTY_NOTICES.txt": "bdd7dccb73386edcce4d0c5318af9a305b789a6c18883aed4fd5c236acf4fde8",
     "extension/page-content.js": "600639e20645ca8fbb757cab1553d5da7fd9c9c598ce2549d16d8901784540af",
-    "extension/panel.html": "4cd2f858ca68c13184fdc47ac49fa565553aaa87aa5ac7cd23eac826cff4964f",
-    "extension/learning-ui.js": "6c9e48b5fe6b7f96ca04f2e1311bbce86e83c4600ed02b5ac29345c260e81476",
-    "extension/manifest.json": "c42394333b062e7c41425a93c9fd0ca330a2a687618e96346a8f748656fdf14d",
+    "extension/panel.html": "3785f821b3cf6bcd27fcce4df7021e639387ec34364add92b35e9b4c4f6a2dea",
+    "extension/learning-ui.js": "4f8bb73416f3a68e3adc9cba69fe6383f3a7f39970cd567bc4097e0f27aabcf9",
+    "extension/manifest.json": "decdcda738c2850df9aff52085bf197681e5404d64111031206fe6458b6dd1c3",
     "extension/stream-request.js": "e320b5fb39fda800ce9df347a6812c7be60af2807baddd3baa57cafd2da2d26a",
     "extension/transcript-service.js": "113edd0679a3d2c1be56200befaebbe9131fdc6ecbe0d840ba0917464aba670d",
     "extension/visual-material.js": "58d54cc2b7b01771c8aaeee8298e13d2facee2d3d010f2a6c099169f9aab53e0",
@@ -245,10 +271,10 @@
     "extension/learning-capture.js": "e75bc2b20c3d1849b2918e08c5619614e8b2dd9c572eaa508bb12853aca2af52",
     "extension/learning-retrieval.js": "59303611028a5b8763b83681761258c428c4ad9bf10de9c4e24e3d061a14fa87",
     "extension/image-drafts.js": "662a44b6f0f2f64847a59904a7b010ad670c32c4c5e6b8e740b3c5e45e098a95",
-    "extension/panel.css": "cd3227ac3d4da14b6de503c55c3578d9549b62369d036124c3dd7eaedcb4bb23",
+    "extension/panel.css": "15a06bf68dee292d2a0108f6f815b0615d3d62848215e3d15c01464229af7878",
     "extension/summary-policy.js": "e181d4cb19fcb5be5d271f06af94239e7d7039e6daa63528b9d9d31a4066e803",
-    "extension/storage.js": "76d73d786b72c3fac73143880a90179d314847c6dd4ad2e3f7c52a03c8946213",
-    "extension/markdown.js": "9c676d5b1910197d4acae2be92665eacf7ccc086203b272a167336089ca27c6f",
+    "extension/storage.js": "b595f8d40e39eca007e03df9a17f43fb850f041bd603304aa0f7319f8a61d16e",
+    "extension/markdown.js": "f4d6f2968fefeb20ccc10e853fca45acdb1f951fe53e160012b78d4f9e277368",
     "extension/icons/128.png": "7724f4dd5821469aafb888146146a1de563daf18b3e4170a9baf941ccac745ef",
     "extension/icons/16.png": "42a30d0e9dbe19876045df018efe66016bfbf030b5e3bdec16317dccc33c7b04",
     "extension/icons/32.png": "a68d20a4c5cfb16bf5d4fa422f66ba423258d6943ab287573cb069b50ea9f616",
@@ -262,12 +288,18 @@
     "extension/agent-protocol.js": "29ce43524681d816fba0f19666b8a91df35dc15f3cc8edd526123de6351a0b82",
     "extension/agent-service.js": "36659a6c30a322af0c7cf542a3c0bbdbeb58dea54458a1280bf893399bad4c26",
     "extension/agent-ui.js": "f463b067fa4c6b74c80a442f1d4c504ce494f4b7c018efe524d9ece3a95af66b",
-    "extension/agent.css": "b57def466bfe81f562b8fe8a22626a9b27601549e67b3c941970bce45cd1e224",
-    "extension/agent.html": "f9ca43a872fc4a287e5c94c5ddd9a52633ee8a8a02dfdcea5d069f7c8601b332",
+    "extension/agent.css": "31a8895f3dd7fcf59e35e4082668941dccff984ea13667e5986fe0e67639adba",
+    "extension/agent.html": "caadbbcf3f3c8acbefe45d8ddb4b2fc0befb955dcde736e225de2e773bdbfb56",
     "ui/app/delete-record.tsx": "f0ac61a1914d75da0906c4e7c733a295203d597a9d22c6f03fcdeeb6cba8e7c9",
     "extension/record-actions.js": "20a1741570c6119b8bc5b5dbcf9075088b331a8a29d5fb48aba9faff56ed58af",
     "extension/summary-pipeline.js": "7a132ffff98611f5297ca7cd39b424fcbac93b0c04cff8d4c7634d9d505bfbe8",
-    "ui/app/library-shelf.tsx": "7ab18f7867131a78828fc4995fc834ccee2608f8d3f668fc9f917d051955bb18",
-    "ui/app/publication-month.ts": "af5290d158ad14174900e2575ecaa28aec311bca17377ab4eaad3784fc03b2bd"
+    "ui/app/library-shelf.tsx": "8df4a122ff7276ccb6a3342e585e6037b1471b9b32e198597c9af0e66167394b",
+    "ui/app/publication-month.ts": "af5290d158ad14174900e2575ecaa28aec311bca17377ab4eaad3784fc03b2bd",
+    "ui/app/library-desk-shelf.css": "6b93ec1f297c81d1f3ae92f6d7139562c590748a3ab6f5ab40ebb39a8422718e",
+    "ui/app/library-record-feed.tsx": "a6f7da829abff0833702f198f4d71fef595bc2a54a48aa2b6e47a9a88cee24ba",
+    "ui/app/library-record-feed.css": "568bbb604b2be4973d12db72e0df39ae83515d523651a80c8759f6c71e2f084f",
+    "ui/app/desk-shell.css": "f07ed6aa844868dbf978c77691f66812b9b1135d0537bd30ead169a236207bd3",
+    "ui/app/learn/workspace.tsx": "9edba2a4317eb4ceb56dc10f4a847c66605bd050f66c78b77b4c7e3bc5653b56",
+    "extension/desk-theme.css": "76f1a8941545b841077a7eab71d60f4a6a4bc061f72fc88f9b82952fd7cd8b73"
   }
 }

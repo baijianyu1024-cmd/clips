@@ -17,6 +17,8 @@ import { installMarkdownEditors, isMarkdownFocused } from './markdown-editor.js'
 import { createMetadataEditor } from './note-fields.js';
 
 const $ = selector => document.querySelector(selector);
+const version = globalThis.chrome?.runtime?.getManifest?.().version;
+if (version) $("#panel-version").textContent = " " + version;
 $("#markdown-help").innerHTML = markdownHelpHTML;
 installMarkdownEditors();
 const escape = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
